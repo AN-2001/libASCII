@@ -1,5 +1,5 @@
 CC := gcc
-libs := -lascii -lm -lgd
+libs := -L../../ -lascii -lm -lgd
 flags := -Wall -Werror -pedantic-errors
 
 triangles: main.c
