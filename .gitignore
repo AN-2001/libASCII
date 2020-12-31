@@ -1,5 +1,5 @@
-compile_commands.json
-.clangd/
-.oh-my-zsh/
-.swp
 .gitignore
+compile_commands.json
+.clangd
+.oh-my-zsh
+.swp
