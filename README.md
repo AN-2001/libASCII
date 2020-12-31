@@ -15,6 +15,8 @@ check out the examples!
 each one can be compiled with `make` 
 after running the program it'll write out a bunch of images to the output directory, to get your gif/video output run one of the scripts inside the scripts directory.
 
+**to run the scripts you need ffmpeg!**
+
 each script follows this syntax
 
 `./script <path to file containing images> {path to output}`
