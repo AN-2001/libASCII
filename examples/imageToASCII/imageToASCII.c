@@ -35,7 +35,7 @@ void error(const char* msg){
 }
 int main(int argc, const char* argv[]){
 	if(argc < 4){
-		error("please use this syntax:\nimageToASCII [inputFile] [outputFile] [fileType]");
+		error("please use this syntax:\nimageToASCII [inputFile] [outputFile] [fileType {1 for png} {2 for jpeg}]");
 		return 1;
 	}
 	const char* inPath = argv[1];

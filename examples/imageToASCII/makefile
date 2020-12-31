@@ -1,12 +1,9 @@
 CC := gcc
-exec := imageToASCII
-flags := -Wall -Werror -pedantic-errors
-libs := -lgd -lraster
+fags := -Wall -Werror -pedantic-errors
+libs :=  -lascii -lm -lgd
 
-all: imageToASCII.c
-	$(CC) $^ $(flags) $(libs) -o $(exec)
-
-
+imageToASCII: imageToASCII.c
+	$(CC) imageToASCII.c $(flags) $(libs) -o $@
 
 clean:
-	rm *.o *.a $(exec)
+	rm imageToASCII

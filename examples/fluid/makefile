@@ -1,5 +1,5 @@
 CC := gcc
-libs := -lascii -lgd
+libs := -lascii -lm -lgd
 flags := -Wall -Werror -pedantic-errors
 
 fluid: main.c
