@@ -1,4 +1,4 @@
-#include <raster/raster.h>
+#include <ascii/grid.h>
 #include <gd.h>
 #include <stdio.h>
 #include <stdlib.h>

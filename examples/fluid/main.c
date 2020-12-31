@@ -1,11 +1,12 @@
-#include <raster/raster.h>
+#include <ascii/grid.h>
+#include <ascii/utill.h>
 #include <gd.h>
 
 #define W 5
 #define H 8
-#define FR 0.7
-#define SR 0.5
-#define EPSILON 1e-6
+#define FR 0.6
+#define SR 0.9
+#define EPSILON 1e-9
 #define ASPECT_W 16
 #define ASPECT_H 9
 #define RATIO 80
@@ -17,11 +18,6 @@
 double board[SCALED_W][SCALED_H];
 double copy[SCALED_W][SCALED_H];
 
-double maxf(double a, double b){
-	if(a > b)
-		return a;
-	return b;
-}
 
 Color generate(Position pos, Dimention dim, Frame_t frame){
 	int x = pos.x / W;
@@ -45,29 +41,8 @@ Color generate(Position pos, Dimention dim, Frame_t frame){
 		}else if( x > 1 && x < SCALED_W - 1){
 			
 			double alteredFlowRate = copy[x][y] - maxf(copy[x][y] - flowRate, EPSILON);
-			double lrate = 0;
-			double rrate = 0;
-			double left = board[x-1][y];
-			double right = board[x+1][y];
-			double k = 0.5;
-			double l = 0.5;
-			if(right <= 1.0 - EPSILON && left <= 1.0 - EPSILON){
-				if(right + left <= EPSILON){
-					k = l = 0.5;
-				}else{ 
-					k = right / (left + right);
-					l = left / (left + right);
-				}
-			}else if(right <= 1.0 - EPSILON || left <= 1.0 - EPSILON){
-					if(right <= 1.0 - EPSILON){
-						k = 1;
-					}else{
-						l = 1;
-					}
-			}
-				
-			rrate = alteredFlowRate * k;
-			lrate = alteredFlowRate * l;
+			double rrate = alteredFlowRate * 0.5f;
+			double lrate = alteredFlowRate * 0.5f;
 
 			copy[x][y] = copy[x][y] - rrate - lrate;
 
@@ -81,7 +56,7 @@ Color generate(Position pos, Dimention dim, Frame_t frame){
 
 	double c = board[x][y];
 	if(c > 0){
-		double fixed = maxf(c, 0.2);
+		double fixed = minf(maxf(c, 0.2), 1);
 		Color offset = colorCreate(0, 60, 70);
 		Color out = colorCreate(30, 120, 255);
 		return colorAdd(offset, colorMult(out, fixed));
