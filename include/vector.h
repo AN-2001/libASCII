@@ -1,5 +1,6 @@
-#ifndef RASTER_VECTOR_H
-#define RASTER_VECTOR_H
+#ifndef ASCII_VECTOR_H
+#define ASCII_VECTOR_H
+
 typedef struct vector{
 	double x,y;
 } Vector;
@@ -29,5 +30,5 @@ Vector vectorScale(Vector dest, double a);
 
 //scales the dimentions down to dim
 Dimention DimentionScale(Dimention dim, Dimention scaledDown);
-#endif //RASTER_VECT_R_H
+#endif //ASCII_VECTOR_H
 

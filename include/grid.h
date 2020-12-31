@@ -1,5 +1,5 @@
-#ifndef RASTER_GRID_H
-#define RASTER_GRID_H
+#ifndef ASCII_GRID_H
+#define ASCII_GRID_H
 #include "vector.h"
 #include "color.h"
 
@@ -30,4 +30,4 @@ void gridClear(PixelGrid grid);
 //turns an x,y pair into an index
 unsigned posToIndex(Position pos, unsigned width);
 
-#endif //RASTER_GRID_H
+#endif //ASCII_GRID_H

@@ -1,5 +1,5 @@
-#ifndef RASTER_RAY_H
-#define RASTER_RAY_H
+#ifndef ASCII_RAY_H
+#define ASCII_RAY_H
 #include "vector.h"
 
 typedef struct ray{
@@ -21,6 +21,8 @@ double rayClosestToPoint(Ray ray, Vector point);
 
 //returns the distance between a point and a ray
 double rayDistToPoint(Ray ray, Vector point);
+
 //returns 1 if the point is on the right of the ray -1  if it's on the left and 0 if it's on the line
 double rayPointDir(Ray ray, Vector Point);
-#endif // RASTER_RAY_H
+
+#endif // ASCII_RAY_H

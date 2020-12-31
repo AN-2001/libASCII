@@ -1,5 +1,5 @@
-#ifndef RASTER_COLOR_H
-#define RASTER_COLOR_H
+#ifndef ASCII_COLOR_H
+#define ASCII_COLOR_H
 
 typedef struct color_t{
 	double r,g,b;
@@ -16,4 +16,4 @@ Color colorMult(Color c1, double a);
 
 //turns a color into a char
 char colorToChar(Color col);
-#endif //RASTER_COLOR_H
+#endif //ASCII_COLOR_H
