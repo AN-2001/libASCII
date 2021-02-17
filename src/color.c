@@ -9,7 +9,7 @@ static const char* colors = " .'`^\",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0O
 char colorToChar(Color col){
 	double brightness = col.r*0.299 + col.g*0.587 + col.b*0.114;
 	int index = (int)(brightness * CHAR_COUNT );
-	return 	colors[index];
+	return colors[index];
 }
 
 Color colorAdd(Color c1, Color c2){
