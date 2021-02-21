@@ -1,25 +1,31 @@
 #include <gd.h>
 #include "grid.h"
+#include <gdfontmb.h>
+#include <gdfontg.h>
+#include <gdfonts.h>
 #include <gdfontt.h>
+#include "utill.h"
 #define CLEAR_SCREEN "\033c"
 #define MAX_CHARS 60
 #define FULL '='
 #define EMPTY '-'
 
-struct pixelGrid{
+static struct asciiGrid{
 	Dimention dim;
-	Frame_t currentFrame, maxFrame;
+	Frame currentFrame, maxFrame;
 	Pixels pixels;
+	Dimention res;
 	Generator generator;
 	Update update;
 	Setup setup;
 	gdFontPtr font;
 	gdImagePtr img;
-};
+	ASCIICharSet charSet;
+}* InnerGrid;
 
-static Color generateValue(const PixelGrid grid, Position pos, Frame_t frame);
-static void generatePixels(PixelGrid grid);
-static void generateImage(const PixelGrid grid);
+static Color generateValue(Position pos);
+static ASCIIGridStatus generatePixels();
+static ASCIIGridStatus generateImage();
 static char* generateBar(int current, int max);
 static void writeOutProgress(const char* path, int current, int max);
 
@@ -36,7 +42,7 @@ static char* generateBar(int current, int max){
 	}
 	double precentage = (double)current / (double)max;
 	int chars = precentage  * (double)MAX_CHARS;
-	char* output = malloc(MAX_CHARS + 5); 
+	char* output = malloc(MAX_CHARS + 10); 
 	char* cpy = output;
 	for(int i = 0; i < MAX_CHARS;i++){
 		char c = (i < chars ? FULL : EMPTY);
@@ -47,134 +53,199 @@ static char* generateBar(int current, int max){
 	return cpy;
 }
 
-PixelGrid gridCreate(unsigned width, unsigned height, Setup setup, Update update, Generator gen){
-	if(width == 0 || height == 0)
-		return NULL;
-	if(gen == NULL)
-		return NULL;
-	//allocate the grid
-	PixelGrid grid = malloc(sizeof(*grid));	
-	if(!grid)
-		return NULL;
-	//allocate the pixels	
-	grid->dim = (Dimention){width, height};
-	grid->currentFrame = 0;
-	grid->maxFrame = 1;
-	grid->generator = gen;
-	grid->setup = setup;
-	grid->update = update;
-	grid->font = gdFontGetTiny();
-	if(grid->font == NULL)
-		return NULL;
-	Dimention fontDim = (Dimention){grid->font->w, grid->font->h};
-	Dimention scaledDown = DimentionScale(grid->dim, fontDim);
-	grid->pixels = malloc(sizeof(Color) * (scaledDown.x + 1) * (scaledDown.y + 1));
-	grid->img = gdImageCreateTrueColor(grid->dim.x, grid->dim.y);
-	if(!grid->pixels || !grid->img){
-		gridFree(grid);
-		return NULL;
+void printGrid(){
+	if(InnerGrid == NULL)
+		return;
+
+	generatePixels();
+	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res); 
+	char *str = malloc((scaledDown.x+1) * (scaledDown.y + 1) + 50);	
+	if(str == NULL)
+		return;
+	char *ret = str;
+	colorSetCharset(InnerGrid->charSet);
+	for(int j = 0; j < scaledDown.y; j++){
+		for(int i = 0; i < scaledDown.x; i++){
+			Position pos = {i, j};
+			int index = posToIndex(pos, scaledDown.x);
+			Color col = InnerGrid->pixels[index];
+			char colorChar = colorToChar(col);
+			sprintf(str++, "%c", colorChar);
+		}
+		sprintf(str++, "\n");
 	}
-	return grid;
+	printf("%s", ret);
+	free(ret);
 }
 
-static void generatePixels(PixelGrid grid){
-	if(grid->pixels == NULL)
-		return;
-	Dimention fontDim = (Dimention){grid->font->w, grid->font->h};
-	Dimention scaledDown = DimentionScale(grid->dim, fontDim); 
+ASCIIGridStatus gridOpen(unsigned width, unsigned height, Setup setup, Update update, Generator gen){
+	if(width == 0 || height == 0)
+		return ASCII_GRID_BAD_ARGUMENT;
+	if(gen == NULL)
+		return ASCII_GRID_BAD_ARGUMENT;
+	//allocate the grid
+	InnerGrid = malloc(sizeof(*InnerGrid));	
+	if(!InnerGrid)
+		return ASCII_GRID_OUT_OF_MEMORY;
+	//allocate the pixels	
+	InnerGrid->dim = (Dimention){width, height};
+	InnerGrid->currentFrame = 0;
+	InnerGrid->maxFrame = 1;
+	InnerGrid->generator = gen;
+	InnerGrid->setup = setup;
+	InnerGrid->update = update;
+	InnerGrid->font = gdFontGetMediumBold();
+	InnerGrid->charSet = ASCII_GRID_BIG_ASCII;
+	InnerGrid->res = (Dimention){InnerGrid->font->w, InnerGrid->font->h};
+	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res);
+	InnerGrid->pixels = malloc(sizeof(Color) * (scaledDown.x + 1) * (scaledDown.y + 1));
+	InnerGrid->img = gdImageCreateTrueColor(InnerGrid->dim.x, InnerGrid->dim.y);
+	if(!InnerGrid->pixels || !InnerGrid->img){
+		gridClose();
+		return ASCII_GRID_OUT_OF_MEMORY;
+	}
+	return ASCII_GRID_SUCCESS;
+}
+
+static ASCIIGridStatus generatePixels(){
+	if(InnerGrid->pixels == NULL)
+		return ASCII_GRID_ERROR;
+	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res); 
 	for(int j = 0; j < scaledDown.y; j ++){
 		for(int i = 0; i < scaledDown.x; i ++){
 			Position pos = {i, j};
 			int index = posToIndex(pos, scaledDown.x);
-			pos.x *= grid->font->w;
-			pos.y *= grid->font->h;
-			Color color = generateValue(grid, pos, grid->currentFrame); 
-			grid->pixels[index] = color;
+			pos.x *= InnerGrid->res.x;
+			pos.y *= InnerGrid->res.y;
+			Color color = generateValue(pos); 
+			if(index > InnerGrid->dim.x * InnerGrid->dim.y)
+				return ASCII_GRID_ERROR;
+			InnerGrid->pixels[index] = color;
 		}
 	}
+	return ASCII_GRID_SUCCESS;
 }
-static Color generateValue(const PixelGrid grid, Position pos, Frame_t frame){
-	if(grid == NULL)
+static Color generateValue(Position pos){
+	if(InnerGrid == NULL)
 		return colorCreate(0, 0, 0);	
-	if(grid->generator == NULL)
+	if(InnerGrid->generator == NULL)
 		return colorCreate(0, 0, 0);
-	Color val = grid->generator(pos, grid->dim, frame);
+	Color val = InnerGrid->generator(pos, InnerGrid->dim, InnerGrid->currentFrame);
 	Color maxVal = colorCreate(255, 255, 255);
 	double r = val.r / maxVal.r;
 	double g = val.g / maxVal.g;
 	double b = val.b / maxVal.b;
+	r = clamp(r, 0.0f, 1.0f); 
+	g = clamp(g, 0.0f, 1.0f); 
+	b = clamp(b, 0.0f, 1.0f); 
 
-	if(r > 1) r = 1;
-	if(g > 1) g = 1;
-	if(b > 1) b = 1;
-	if(r < 0) r = 0;
-	if(g < 0) g = 0;
-	if(b < 0) b = 0;
-	return colorCreate(r, g, b);
+	Color out = colorCreate(r, g, b);
+	return out;
 }
-unsigned posToIndex(Position pos, unsigned width){
-	return pos.x + pos.y * width;
-}
-static void generateImage(const PixelGrid grid){
-	if(grid == NULL)
-		return;
-	if(!grid->font || !grid->pixels)
-		return;
-	Dimention fontDim = (Dimention){grid->font->w, grid->font->h};
-	Dimention scaledDown = DimentionScale(grid->dim, fontDim);
+static ASCIIGridStatus generateImage(){
+	if(InnerGrid == NULL)
+		return ASCII_GRID_ERROR;
+	if(!InnerGrid->font || !InnerGrid->pixels)
+		return ASCII_GRID_ERROR;
+	colorSetCharset(InnerGrid->charSet);
+	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res);
 	for(int j = 0; j < scaledDown.y; j ++){
 		for(int i = 0; i < scaledDown.x; i ++){
 			Position pos = {i, j};
 			int index = posToIndex(pos, scaledDown.x);
-			Color col = grid->pixels[index];
+			Color col = InnerGrid->pixels[index];
 			char colorChar = colorToChar(col);
-			gdImageChar(grid->img, grid->font, i * grid->font->w, j * grid->font->h, colorChar, gdTrueColor((int)(col.r*255), (int)(col.g*255), (int)(col.b*255)));
+			gdImageChar(InnerGrid->img, InnerGrid->font, i * InnerGrid->font->w, j * InnerGrid->font->h, colorChar, gdTrueColor((int)(col.r*255), (int)(col.g*255), (int)(col.b*255)));
 		}
 	}
+	return ASCII_GRID_SUCCESS;
 }
-void gridDrawToImage(PixelGrid grid, const char* filepath){
-	if(grid == NULL)
-		return;
-	if(grid->setup == NULL || grid->update == NULL){
-		return;
+ASCIIGridStatus gridDrawToImage(const char* filepath){
+	if(InnerGrid == NULL)
+		return ASCII_GRID_ERROR;
+	if(InnerGrid->setup == NULL || InnerGrid->update == NULL){
+		return ASCII_GRID_ERROR;
 	}
 	if(filepath == NULL){
-		return;
+		return ASCII_GRID_BAD_ARGUMENT;
 	}
 	char path[64];
-	grid->setup();
+	gridClear();
+	InnerGrid->setup();
 	do{
-		grid->update(grid, grid->currentFrame);
-		if(grid->maxFrame > 1){
-			sprintf(path, "%s%d.png", filepath, grid->currentFrame);
+		InnerGrid->update(InnerGrid->currentFrame);
+		if(InnerGrid->maxFrame > 1){
+			sprintf(path, "%s%d.png", filepath, InnerGrid->currentFrame);
 		}else{
 			sprintf(path, "%s.png", filepath);
 		}
-		generatePixels(grid);
-		generateImage(grid);
-		if(grid->img == NULL)
-			return;
-		writeOutProgress(path, grid->currentFrame, grid->maxFrame);
-		gdImageFile(grid->img, path); 
-		grid->currentFrame++;
-	}while(grid->currentFrame < grid->maxFrame);
+		generatePixels();
+		generateImage();
+		if(InnerGrid->img == NULL)
+			return ASCII_GRID_ERROR;
+		writeOutProgress(path, InnerGrid->currentFrame, InnerGrid->maxFrame);
+		gdImageFile(InnerGrid->img, path); 
+		InnerGrid->currentFrame++;
+	}while(InnerGrid->currentFrame < InnerGrid->maxFrame);
+	return ASCII_GRID_SUCCESS;
 }
 
-void gridClear(PixelGrid grid){
-	if(grid == NULL || grid->img == NULL){
-		return;
-	}
-	gdImageFilledRectangle(grid->img, 0, 0, grid->dim.x, grid->dim.y, gdTrueColor(0,0,0));
-}
-void gridFree(PixelGrid grid){
-	gdImageDestroy(grid->img);
-	free(grid->pixels);
-	free(grid);
-}
-void gridSetMaxFrame(PixelGrid grid, Frame_t max){
-	if(grid == NULL){
-		return;
-	}
-	grid->maxFrame = max;
-}
+ASCIIGridStatus gridClear(){
+	if(InnerGrid == NULL || InnerGrid->img == NULL)
+		return ASCII_GRID_ERROR;
 
+	gdImageDestroy(InnerGrid->img);
+	InnerGrid->img = gdImageCreateTrueColor(InnerGrid->dim.x, InnerGrid->dim.y);
+	//gdImageRectangle(InnerGrid->img, 0, 0, InnerGrid->dim.x, InnerGrid->dim.y, gdTrueColor(0, 0, 0));
+	return ASCII_GRID_SUCCESS;
+}
+ASCIIGridStatus gridClose(){
+	if(InnerGrid == NULL)
+		return ASCII_GRID_ERROR;
+	gdImageDestroy(InnerGrid->img);
+	free(InnerGrid->pixels);
+	free(InnerGrid);
+	return ASCII_GRID_SUCCESS;
+}
+ASCIIGridStatus gridSetMaxFrame( Frame max){
+	if(InnerGrid == NULL){
+		return ASCII_GRID_ERROR;
+	}
+	InnerGrid->maxFrame = max;
+	return ASCII_GRID_SUCCESS;
+}
+ASCIIGridStatus gridSetFont(ASCIIFont font){
+	switch(font){
+		case ASCII_GRID_TINY:
+				InnerGrid->font = gdFontGetTiny();
+			break;
+		case ASCII_GRID_MEDIUM_BOLD:
+				InnerGrid->font = gdFontGetMediumBold();
+			break;
+		case ASCII_GRID_GIANT:
+				InnerGrid->font = gdFontGetGiant();
+			break;
+		case ASCII_GRID_SMALL:
+				InnerGrid->font = gdFontGetSmall();
+			break;
+		default:
+			return ASCII_GRID_BAD_ARGUMENT;
+	}
+
+	//TODO: fix this
+	InnerGrid->res = (Dimention){InnerGrid->font->w, InnerGrid->font->h};
+	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res);
+	free(InnerGrid->pixels);
+	InnerGrid->pixels = malloc(sizeof(Color) * (scaledDown.x + 1) * (scaledDown.y + 1));
+	if(InnerGrid->pixels == NULL)
+		return ASCII_GRID_OUT_OF_MEMORY;
+	gdImageDestroy(InnerGrid->img);
+	InnerGrid->img = gdImageCreateTrueColor(InnerGrid->dim.x, InnerGrid->dim.y);
+	return ASCII_GRID_SUCCESS;
+}
+ASCIIGridStatus gridSetCharset(ASCIICharSet set){
+	if(set > 1 || set < 0)
+		return ASCII_GRID_BAD_ARGUMENT;
+	InnerGrid->charSet = set;
+	return ASCII_GRID_SUCCESS;
+}

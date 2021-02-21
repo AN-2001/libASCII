@@ -20,3 +20,14 @@ double signf(double n){
 	}
 	return 0;
 }
+
+double clamp(double value, double lower, double upper){
+	if(value < lower)
+		return lower;
+	if(value > upper)
+		return upper;
+	return value;
+}
+unsigned posToIndex(Position pos, unsigned width){
+	return pos.x + pos.y * width;
+}

@@ -1,7 +1,8 @@
 #include "triangle.h"
 #include "utill.h"
 #include "limits.h"
-Triangle triangleCreate(Vector vertecies[3]){
+
+Triangle triangleCreate(Position vertecies[3]){
 	Triangle res;
 	for(int i = 0; i < 3;i++){
 		int next = i + 1;
@@ -14,7 +15,7 @@ Triangle triangleCreate(Vector vertecies[3]){
 	return res;
 }
 
-double triangleDistToPoint(Triangle triangle, Vector point){
+double triangleDistToPoint(Triangle triangle, Position point){
 	double min = INT_MAX;
 	int found = 0;
 	for(int i = 0; i < 3;i++){
@@ -35,7 +36,7 @@ double triangleDistToPoint(Triangle triangle, Vector point){
 }
 
 //TODO: remove this and implement it properly
-static double crossThree (Vector p1, Vector p2, Vector p3)
+static double crossThree (Position p1, Position p2, Position p3)
 {
     return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
 }
@@ -45,8 +46,8 @@ int triangleIsPointInside (Triangle trig, Vector point)
     double d1 = crossThree(point, trig.sides[0].position, trig.sides[1].position);
     double d2 = crossThree(point, trig.sides[1].position, trig.sides[2].position);
     double d3 = crossThree(point, trig.sides[2].position, trig.sides[0].position);
-    int hn = (d1 < 0) || (d2 < 0) || (d3 < 0);
-    int hp = (d1 > 0) || (d2 > 0) || (d3 > 0);
+    int hn = (d1 < -1) || (d2 < -1) || (d3 < -1);
+    int hp = (d1 > 1) || (d2 > 1) || (d3 > 1);
     return !(hn && hp);
 }	
 
