@@ -14,7 +14,7 @@
 #define ARR_SIZE(arr) ( sizeof(arr) /sizeof(arr[0]) )
 
 //set the vertecies of the shape
-Vector vertecies[] = {{100, -100}, {-100, -100}, {100, 100}, {-100, 100}};
+Vector vertecies[] = {{WIDTH/4, -HEIGHT/4}, {-WIDTH/4, -HEIGHT/4}, {WIDTH/4, HEIGHT/4}, {-WIDTH/4, HEIGHT/4}};
 
 //give it the order that you want to draw the triangles in
 int order[] = {0, 1, 2, 1, 3, 2};
@@ -48,7 +48,7 @@ Color generate(Position pos, Dimention dim, Frame frame){
 	srand(pos.x + pos.y);
 	for(int i = 0; i < ARR_SIZE(triangles);i++){
 		//first translate everything to the center of the screen
-		Vector trans[3] = {{1,0}, {0, 1}, {200, 200}};
+		Vector trans[3] = {{1,0}, {0, 1}, {WIDTH/2, HEIGHT/2}};
 		Mat2x3 translate = mat2x3Create(trans);
 		Triangle translated = triangleTransformed(triangles[i], &translate); 
 		//seed the random generator
@@ -69,10 +69,12 @@ Color generate(Position pos, Dimention dim, Frame frame){
 }
 
 int main(){
-	gridOpen_(WIDTH, HEIGHT, setup, update, generate);
-	gridSetMaxFrame(MAX_FRAME);
-	gridSetFrameDelay(1e4);
-	gridDraw(NULL);
-	gridClose();	
+	for(;;){
+		gridOpen_(WIDTH, HEIGHT, setup, update, generate);
+		gridSetMaxFrame(MAX_FRAME);
+		gridSetFrameDelay(1e4);
+		gridDraw(NULL);
+		gridClose();	
+	}
 	return 0;
 }

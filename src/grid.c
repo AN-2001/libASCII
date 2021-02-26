@@ -1,9 +1,14 @@
-#include "grid.h"
+#ifdef ASCII_USE_GD
 #include <gd.h>
 #include <gdfontmb.h>
 #include <gdfontg.h>
 #include <gdfonts.h>
 #include <gdfontt.h>
+#endif
+
+#include "grid.h"
+#include <stdlib.h>
+#include <stdio.h>
 #include "utill.h"
 #include "outputProgress.h"
 #include <unistd.h>
@@ -16,14 +21,18 @@ static struct asciiGrid{
 	Generator generator;
 	Update update;
 	Setup setup;
+#ifdef ASCII_USE_GD
 	gdFontPtr font;
 	gdImagePtr img;
+#endif
 	ASCIICharSet charSet;
 	Delay frameDelay;
 }* InnerGrid = NULL;
 extern inline char colorToChar(Color col);
 
+#ifdef ASCII_USE_GD
 static ASCIIGridStatus gridSetFont(ASCIIFont font);
+#endif
 
 
 
@@ -47,18 +56,20 @@ ASCIIGridStatus gridOpen(unsigned width, unsigned height, ASCIIFont font, Setup 
 	InnerGrid->setup = setup;
 	InnerGrid->update = update;
 	InnerGrid->charSet = ASCII_SET_BIG;
-
-	InnerGrid->font = gdFontGetMediumBold();
-	InnerGrid->res = (Dimention){InnerGrid->font->w, InnerGrid->font->h};
-	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res);
-	InnerGrid->pixels = malloc(sizeof(Color) * (scaledDown.x + 1) * (scaledDown.y + 1));
-	InnerGrid->img = gdImageCreateTrueColor(InnerGrid->dim.x, InnerGrid->dim.y);
 	InnerGrid->frameDelay = 0;
-	ASCIIGridStatus status;
-	if((status = gridSetFont(font)) != ASCII_GRID_SUCCESS){
-		gridClose();
-		return status;
+	InnerGrid->res = vectorCreate(1, 1);
+
+#ifdef ASCII_USE_GD
+	if(font != ASCII_FONT_TERM){
+		ASCIIGridStatus status;
+		if((status = gridSetFont(font)) != ASCII_GRID_SUCCESS){
+			gridClose();
+			return status;
+		}
 	}
+#endif
+
+
 	//reset the terminal!
 	write(fileno(stdout), ASCII_RESET_TERM ASCII_TURN_CURSOR_OFF, ASCII_RESET_TERM_SIZE + ASCII_TURN_CURSOR_OFF_SIZE);
 	return ASCII_GRID_SUCCESS;
@@ -105,7 +116,7 @@ static ASCIIGridStatus generatePixels(){
 	return ASCII_GRID_SUCCESS;
 }
 
-
+#ifdef ASCII_USE_GD
 static ASCIIGridStatus generateImage(){
 	if(InnerGrid == NULL)
 		return ASCII_GRID_NOT_OPEN;
@@ -125,7 +136,6 @@ static ASCIIGridStatus generateImage(){
 	}
 	return ASCII_GRID_SUCCESS;
 }
-
 static ASCIIGridStatus drawToImage(const char* filepath){
 	if(!filepath)
 		return ASCII_GRID_BAD_ARGUMENT;
@@ -146,6 +156,7 @@ static ASCIIGridStatus drawToImage(const char* filepath){
 
 	return ASCII_GRID_SUCCESS;
 }
+#endif //ASCII_USE_GD
 
 static ASCIIGridStatus printToTerm(){
 	if(InnerGrid == NULL)
@@ -193,10 +204,13 @@ ASCIIGridStatus gridDraw(const char* filepath){
 		if(!filepath){
 			printToTerm();
 			usleep(InnerGrid->frameDelay);
-		}else{
+		}
+#ifdef ASCII_USE_GD
+		else{
 			drawToImage(filepath);
 			writeOutProgress(InnerGrid->currentFrame, InnerGrid->maxFrame);
 		}
+#endif //ASCII_USE_GD
 
 		InnerGrid->currentFrame++;
 
@@ -209,6 +223,7 @@ ASCIIGridStatus gridDraw(const char* filepath){
 ASCIIGridStatus gridClear(){
 	if(!InnerGrid)
 		return ASCII_GRID_NOT_OPEN;
+#ifdef ASCII_USE_GD
 	if(!InnerGrid->img)
 		return ASCII_GRID_ERROR;
 
@@ -217,13 +232,15 @@ ASCIIGridStatus gridClear(){
 			gdImageSetPixel(InnerGrid->img, x, y, gdTrueColorAlpha(0, 0, 0, 0));
 		}
 	}
+#endif
 	return ASCII_GRID_SUCCESS;
 }
 ASCIIGridStatus gridClose(){
 	if(InnerGrid == NULL)
 		return ASCII_GRID_NOT_OPEN;
-
+#ifdef ASCII_USE_GD
 	gdImageDestroy(InnerGrid->img);
+#endif
 	free(InnerGrid->pixels);
 	free(InnerGrid);
 	write(fileno(stdout), ASCII_RESET_TERM, ASCII_RESET_TERM_SIZE);
@@ -239,6 +256,7 @@ ASCIIGridStatus gridSetMaxFrame( Frame max){
 	InnerGrid->maxFrame = max;
 	return ASCII_GRID_SUCCESS;
 }
+#ifdef ASCII_USE_GD
 static ASCIIGridStatus gridSetFont(ASCIIFont font){
 	switch(font){
 		case ASCII_FONT_TINY:
@@ -253,27 +271,22 @@ static ASCIIGridStatus gridSetFont(ASCIIFont font){
 		case ASCII_FONT_SMALL:
 				InnerGrid->font = gdFontGetSmall();
 			break;
-		case ASCII_FONT_TERM:
-			break;
 		default:
 			return ASCII_GRID_BAD_ARGUMENT;
 	}
-	if(font != ASCII_FONT_TERM)
-		InnerGrid->res = (Dimention){InnerGrid->font->w, InnerGrid->font->h};
-	else
-		InnerGrid->res = (Dimention){1, 1};
+	InnerGrid->res = (Dimention){InnerGrid->font->w, InnerGrid->font->h};
 
 	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res);
 	InnerGrid->pixels = malloc(sizeof(Color) * (scaledDown.x + 1) * (scaledDown.y + 1));
 	if(!InnerGrid->pixels)
 		return ASCII_GRID_OUT_OF_MEMORY;
-	if( font != ASCII_FONT_TERM){
-		InnerGrid->img = gdImageCreateTrueColor(InnerGrid->dim.x, InnerGrid->dim.y);
-		if(!InnerGrid->img)
-			return ASCII_GRID_OUT_OF_MEMORY;
-	}
+
+	InnerGrid->img = gdImageCreateTrueColor(InnerGrid->dim.x, InnerGrid->dim.y);
+	if(!InnerGrid->img)
+		return ASCII_GRID_OUT_OF_MEMORY;
 	return ASCII_GRID_SUCCESS;
 }
+#endif //ASCII_USE_GD
 
 ASCIIGridStatus gridSetCharset(ASCIICharSet set){
 	if(set > 1 || set < 0)

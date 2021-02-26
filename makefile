@@ -2,7 +2,7 @@ CC := gcc
 lib := ascii
 include := include
 src := src
-flags := -Wall -Werror -pedantic-errors -I$(include) -I. 
+flags := -Wall -Werror -pedantic-errors -I$(include) -I.  -DASCII_USE_GD -g
 output := libascii.a
 include_path := /usr/include
 lib_path := /usr/local/lib
@@ -16,7 +16,7 @@ install:
 	cp $(output) $(lib_path)
 
 %.o: $(src)/%.c $(include)/%.h
-	$(CC) -c $< $(flags) $(deps) -o $@  
+	$(CC) -c $< $(flags) -o $@  
 
 clean:
 	rm $(obj) $(output)
