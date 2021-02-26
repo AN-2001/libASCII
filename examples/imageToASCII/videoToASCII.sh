@@ -11,13 +11,15 @@ then
 	echo "enter a video!"
 	exit 1
 fi
+
 input_images=$(ls  --sort=version $input_file)
 size=$(ls $input_file | wc -l)
 output_file="./output"
 let "i=0"
 rm  -f $output_file/*
 for file_name in $input_images; do
-	./imageToASCII $input_file"/"$file_name $output_file/"out$i" 1	
+	./imageToASCII $input_file"/"$file_name 1 $output_file/"out$i"	
+
 	let "i=i+1"
 	let "left=size-i"
 	echo "wrote $file_name, only $left images to go"

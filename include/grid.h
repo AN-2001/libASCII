@@ -7,14 +7,17 @@ typedef enum{
 	ASCII_GRID_OUT_OF_MEMORY,
 	ASCII_GRID_SUCCESS,
 	ASCII_GRID_BAD_ARGUMENT,
+	ASCII_GRID_NOT_OPEN,
+	ASCII_GRID_OUT_OF_BOUNDS,
 	ASCII_GRID_ERROR
 } ASCIIGridStatus;
 
 typedef enum{
-	ASCII_GRID_TINY = 0,
-	ASCII_GRID_MEDIUM_BOLD,
-	ASCII_GRID_GIANT,
-	ASCII_GRID_SMALL,
+	ASCII_FONT_TINY = 0,
+	ASCII_FONT_MEDIUM_BOLD,
+	ASCII_FONT_GIANT,
+	ASCII_FONT_SMALL,
+	ASCII_FONT_TERM
 } ASCIIFont;
 
 typedef struct asciiGrid *ASCIIGrid;
@@ -23,27 +26,50 @@ typedef Color* Pixels;
 typedef Color (*Generator)(Position pos, Dimention dim, Frame frame);
 typedef void (*Update)(Frame frame);
 typedef void (*Setup)();
+typedef unsigned Delay;
 
 
+/**
+ * opens the grid, always call this before doing anything
+ * it initializes the library!
+ * */
+ASCIIGridStatus gridOpen(unsigned width, unsigned height, ASCIIFont font, Setup setup, Update update, Generator gen);
 
-//makes a grid and sets the color black
-ASCIIGridStatus gridOpen(unsigned width, unsigned height, Setup setup, Update update, Generator gen);
+#define gridOpen_(w, h, s, u, g) gridOpen(w, h, ASCII_FONT_MEDIUM_BOLD, s, u, g)
 
-//draws a a grid into an image
-ASCIIGridStatus gridDrawToImage(const char* filepath);
+/**
+ * draws the grid
+ * @filepath: the file path for the output image, if set to NULL output will be 
+ * 			  to stdout
+ * */
+ASCIIGridStatus gridDraw(const char* filepath);
 
-//clears a pixel grid's memory
+/**
+ * frees the grid's memory
+ * */
 ASCIIGridStatus gridClose(void);
 
-//sets the max frame in a grid
+/**
+ * sets the number of images that the grid should generate
+ * */
 ASCIIGridStatus gridSetMaxFrame(Frame max);
 
-//clears the ASCII image in a grid
+/**
+ * clears the grid by overwriting everything with black
+ * */
 ASCIIGridStatus gridClear(void);
-//sets the grid's font
-ASCIIGridStatus gridSetFont(ASCIIFont font);
-//sets the char set 
+
+
+/**
+ * changes the grid's charset
+ * @set: the set that we want to use
+ * keep in mind that this is an expensive call right now,
+ * I'd advise specifying the set in the openGrid function!
+ * */
 ASCIIGridStatus gridSetCharset(ASCIICharSet set);
-//prints the grid in text form
-void printGrid();
+
+/**
+ * sets the delay between frames when printing out to terminal
+ * */
+ASCIIGridStatus gridSetFrameDelay(Delay del);
 #endif //ASCII_GRID_H

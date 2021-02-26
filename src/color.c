@@ -1,6 +1,7 @@
-#include <stdlib.h>
 #include "color.h"
-
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
 //constants
 #define CHAR_COUNT_BIG 70.0
@@ -10,22 +11,24 @@ static const char* const colors_small = " .:-=+*#%@";
 
 //TODO: add xmacro here
 static const char* const sets[2] = {colors_big, colors_small};
-static const size_t sizes[2] = {CHAR_COUNT_BIG, CHAR_COUNT_SMALL};
+static const unsigned sizes[2] = {CHAR_COUNT_BIG, CHAR_COUNT_SMALL};
 
 //to avoid using too many if statemnts
-static const char* current_set = colors_big;
-static size_t current_size = CHAR_COUNT_BIG;
+const char* current_set = colors_big;
+unsigned current_size = CHAR_COUNT_BIG;
 
 void colorSetCharset(ASCIICharSet set){
 	current_set = sets[set];	
 	current_size = sizes[set];
 }
 
-char colorToChar(Color col){
-	double brightness = col.r*0.299 + col.g*0.587 + col.b*0.114;
 
-	int index = (int)(brightness * current_size );
-	return 	current_set[index];
+unsigned setFGColor(char* buff, Color foreground){
+	char s[64];
+	sprintf(s, ASCII_START_ATTR ASCII_FG ASCII_RGB ";%d;%d;%d"ASCII_END_ATTR,
+						(int)(foreground.r*255), (int)(foreground.g*255), (int)(foreground.b*255));
+	sprintf(buff, "%s", s);	
+	return strlen(s);
 }
 
 Color colorAdd(Color c1, Color c2){
@@ -43,3 +46,4 @@ Color colorCreate(double r, double g, double b){
 Color colorMult(Color c1, double a){
 	return colorCreate(c1.r * a, c1.g * a, c1.b * a);
 }
+
