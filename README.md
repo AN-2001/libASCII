@@ -2,7 +2,7 @@
 a **toy** library for drawing images but in ASCII!
 
 ![gif!](https://github.com/0Cufox0/libASCII/blob/main/docs/triangles_1.gif)
-
+![gif!](https://github.com/0Cufox0/libASCII/blob/main/docs/fluid_1.gif)
 
 ## dependencies
 - libgd
