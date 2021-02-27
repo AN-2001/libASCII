@@ -41,6 +41,7 @@ void writeOutProgress(int current, int max){
 
 	write(fileno(stdout), "working:", 8);
 	write(fileno(stdout), loading + loadingCtr, 1);
+	write(fileno(stdout), "\n", 1);
 	write(fileno(stdout), progress, strlen(progress));  
 	write(fileno(stdout), ASCII_MOVE_CURSOR(1, 1), ASCII_RESET_CURSOR_SIZE);
 

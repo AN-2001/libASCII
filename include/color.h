@@ -5,6 +5,7 @@
 #define ASCII_BG "48"
 #define ASCII_RGB ";2"
 #define ASCII_END_ATTR "m"
+
 extern const char* current_set;
 extern unsigned current_size;
 typedef struct color_t{
