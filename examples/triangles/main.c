@@ -61,7 +61,7 @@ Color generate(Position pos, Dimention dim, Frame frame){
 		if(dist < 0)
 			continue;
 		//check if the triangle intersects this ASCII chracter
-		if(dist <= 5){
+		if(dist <= 7){
 			output = colorAdd(output, colorCreate( 255 , 255 , 255));
 		}
 	}
@@ -69,12 +69,10 @@ Color generate(Position pos, Dimention dim, Frame frame){
 }
 
 int main(){
-	for(;;){
-		gridOpen_(WIDTH, HEIGHT, setup, update, generate);
-		gridSetMaxFrame(MAX_FRAME);
-		gridSetFrameDelay(1e4);
-		gridDraw(NULL);
-		gridClose();	
-	}
+	gridOpen(WIDTH, HEIGHT, setup, update, generate);
+	gridSetMaxFrame(MAX_FRAME);
+	gridSetFrameDelay(5e4);
+	gridDraw();
+	gridClose();	
 	return 0;
 }

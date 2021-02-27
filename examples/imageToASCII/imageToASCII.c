@@ -40,12 +40,12 @@ int main(int argc, const char* argv[]){
 			break;
 	}
 	fclose(img);
-    if(gridOpen(image->sx, image->sy, ASCII_FONT_TINY, NULL,  NULL , generate) != ASCII_GRID_SUCCESS){
+    if(gridOpen(image->sx, image->sy, NULL,  NULL , generate) != ASCII_GRID_SUCCESS){
 		fprintf(stderr, "COULD'T OPEN GRID");    
 		return 1;
 	}
 	gridSetMaxFrame(1);
-	gridDraw(NULL);
+	gridDraw();
 
 	gridClose();
 	gdImageDestroy(image);
