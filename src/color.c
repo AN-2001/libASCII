@@ -31,6 +31,7 @@ unsigned setFGColor(char* buff, Color foreground){
 	return strlen(s);
 }
 
+
 Color colorAdd(Color c1, Color c2){
 	return colorCreate(c1.r + c2.r, c1.g + c2.g, c1.b + c2.b);
 }
