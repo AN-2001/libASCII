@@ -12,6 +12,7 @@ typedef enum{
 	ASCII_GRID_ERROR
 } ASCIIGridStatus;
 
+#ifdef ASCII_USE_GD
 typedef enum{
 	ASCII_FONT_TINY = 0,
 	ASCII_FONT_MEDIUM_BOLD,
@@ -19,6 +20,7 @@ typedef enum{
 	ASCII_FONT_SMALL,
 	ASCII_FONT_TERM
 } ASCIIFont;
+#endif
 
 typedef struct asciiGrid *ASCIIGrid;
 typedef int Frame;
@@ -33,16 +35,30 @@ typedef unsigned Delay;
  * opens the grid, always call this before doing anything
  * it initializes the library!
  * */
-ASCIIGridStatus gridOpen(unsigned width, unsigned height, ASCIIFont font, Setup setup, Update update, Generator gen);
+ASCIIGridStatus gridOpen(unsigned width, unsigned height
+#ifdef ASCII_USE_GD
+		, ASCIIFont font
+#endif
+		, Setup setup, Update update, Generator gen);
+
+#ifdef ASCII_USE_GD
 
 #define gridOpen_(w, h, s, u, g) gridOpen(w, h, ASCII_FONT_MEDIUM_BOLD, s, u, g)
+
+#endif
 
 /**
  * draws the grid
  * @filepath: the file path for the output image, if set to NULL output will be 
  * 			  to stdout
  * */
-ASCIIGridStatus gridDraw(const char* filepath);
+ASCIIGridStatus gridDraw(
+#ifdef ASCII_USE_GD
+		const char* filepath
+#else
+		void
+#endif
+		);
 
 /**
  * frees the grid's memory

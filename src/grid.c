@@ -1,9 +1,14 @@
-#include "grid.h"
+#ifdef ASCII_USE_GD
 #include <gd.h>
 #include <gdfontmb.h>
 #include <gdfontg.h>
 #include <gdfonts.h>
 #include <gdfontt.h>
+#endif
+
+#include "grid.h"
+#include <stdlib.h>
+#include <stdio.h>
 #include "utill.h"
 #include "outputProgress.h"
 #include <unistd.h>
@@ -16,50 +21,62 @@ static struct asciiGrid{
 	Generator generator;
 	Update update;
 	Setup setup;
+#ifdef ASCII_USE_GD
 	gdFontPtr font;
 	gdImagePtr img;
+#endif
 	ASCIICharSet charSet;
 	Delay frameDelay;
 }* InnerGrid = NULL;
 extern inline char colorToChar(Color col);
 
+#ifdef ASCII_USE_GD
 static ASCIIGridStatus gridSetFont(ASCIIFont font);
+#endif
 
 
 
 
-ASCIIGridStatus gridOpen(unsigned width, unsigned height, ASCIIFont font, Setup setup, Update update, Generator gen){
+ASCIIGridStatus gridOpen(unsigned width, unsigned height
+#ifdef ASCII_USE_GD
+		, ASCIIFont font
+#endif
+		, Setup setup, Update update, Generator gen){
 	if(width == 0 || height == 0)
 		return ASCII_GRID_BAD_ARGUMENT;
 
 	if(gen == NULL)
 		return ASCII_GRID_BAD_ARGUMENT;
 
-	//allocate the grid
 	InnerGrid = malloc(sizeof(*InnerGrid));	
 	if(!InnerGrid)
 		return ASCII_GRID_OUT_OF_MEMORY;
-	//allocate the pixels	
-	InnerGrid->dim = (Dimention){width, height};
+
+	InnerGrid->dim = vectorCreate(width, height);
 	InnerGrid->currentFrame = 0;
 	InnerGrid->maxFrame = 1;
 	InnerGrid->generator = gen;
 	InnerGrid->setup = setup;
 	InnerGrid->update = update;
 	InnerGrid->charSet = ASCII_SET_BIG;
+	InnerGrid->frameDelay = 0;
+	InnerGrid->res = vectorCreate(7, 13);
 
-	InnerGrid->font = gdFontGetMediumBold();
-	InnerGrid->res = (Dimention){InnerGrid->font->w, InnerGrid->font->h};
+#ifdef ASCII_USE_GD
+	if(font != ASCII_FONT_TERM){
+		ASCIIGridStatus status;
+		if((status = gridSetFont(font)) != ASCII_GRID_SUCCESS){
+			gridClose();
+			return status;
+		}
+	}
+#endif
+
 	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res);
 	InnerGrid->pixels = malloc(sizeof(Color) * (scaledDown.x + 1) * (scaledDown.y + 1));
-	InnerGrid->img = gdImageCreateTrueColor(InnerGrid->dim.x, InnerGrid->dim.y);
-	InnerGrid->frameDelay = 0;
-	ASCIIGridStatus status;
-	if((status = gridSetFont(font)) != ASCII_GRID_SUCCESS){
-		gridClose();
-		return status;
-	}
-	//reset the terminal!
+	if(!InnerGrid->pixels)
+		return ASCII_GRID_OUT_OF_MEMORY;
+
 	write(fileno(stdout), ASCII_RESET_TERM ASCII_TURN_CURSOR_OFF, ASCII_RESET_TERM_SIZE + ASCII_TURN_CURSOR_OFF_SIZE);
 	return ASCII_GRID_SUCCESS;
 }
@@ -105,7 +122,7 @@ static ASCIIGridStatus generatePixels(){
 	return ASCII_GRID_SUCCESS;
 }
 
-
+#ifdef ASCII_USE_GD
 static ASCIIGridStatus generateImage(){
 	if(InnerGrid == NULL)
 		return ASCII_GRID_NOT_OPEN;
@@ -125,7 +142,6 @@ static ASCIIGridStatus generateImage(){
 	}
 	return ASCII_GRID_SUCCESS;
 }
-
 static ASCIIGridStatus drawToImage(const char* filepath){
 	if(!filepath)
 		return ASCII_GRID_BAD_ARGUMENT;
@@ -146,6 +162,7 @@ static ASCIIGridStatus drawToImage(const char* filepath){
 
 	return ASCII_GRID_SUCCESS;
 }
+#endif //ASCII_USE_GD
 
 static ASCIIGridStatus printToTerm(){
 	if(InnerGrid == NULL)
@@ -172,11 +189,17 @@ static ASCIIGridStatus printToTerm(){
 
 	write(fileno(stdout), ASCII_MOVE_CURSOR(1, 1), ASCII_RESET_CURSOR_SIZE);
 	write(fileno(stdout), start, strlen(start));
-
+	free(start);
 	return ASCII_GRID_SUCCESS;
 }
 
-ASCIIGridStatus gridDraw(const char* filepath){
+ASCIIGridStatus gridDraw(
+#ifdef ASCII_USE_GD
+		const char* filepath
+#else
+		void
+#endif
+		){
 	if(!InnerGrid)
 		return ASCII_GRID_NOT_OPEN;
 
@@ -190,14 +213,19 @@ ASCIIGridStatus gridDraw(const char* filepath){
 
 		generatePixels();
 
+#ifdef ASCII_USE_GD
 		if(!filepath){
 			printToTerm();
 			usleep(InnerGrid->frameDelay);
-		}else{
+		}
+		else{
 			drawToImage(filepath);
 			writeOutProgress(InnerGrid->currentFrame, InnerGrid->maxFrame);
 		}
-
+#else
+		printToTerm();
+		usleep(InnerGrid->frameDelay);
+#endif //ASCII_USE_GD
 		InnerGrid->currentFrame++;
 
 
@@ -209,6 +237,7 @@ ASCIIGridStatus gridDraw(const char* filepath){
 ASCIIGridStatus gridClear(){
 	if(!InnerGrid)
 		return ASCII_GRID_NOT_OPEN;
+#ifdef ASCII_USE_GD
 	if(!InnerGrid->img)
 		return ASCII_GRID_ERROR;
 
@@ -217,28 +246,30 @@ ASCIIGridStatus gridClear(){
 			gdImageSetPixel(InnerGrid->img, x, y, gdTrueColorAlpha(0, 0, 0, 0));
 		}
 	}
+#endif
 	return ASCII_GRID_SUCCESS;
 }
 ASCIIGridStatus gridClose(){
 	if(InnerGrid == NULL)
 		return ASCII_GRID_NOT_OPEN;
-
+#ifdef ASCII_USE_GD
 	gdImageDestroy(InnerGrid->img);
+#endif
 	free(InnerGrid->pixels);
 	free(InnerGrid);
-	write(fileno(stdout), ASCII_RESET_TERM, ASCII_RESET_TERM_SIZE);
+
+	write(fileno(stdout), ASCII_TURN_CURSOR_ON, ASCII_TURN_CURSOR_ON_SIZE);
+
 	return ASCII_GRID_SUCCESS;
 }
 ASCIIGridStatus gridSetMaxFrame( Frame max){
 	if(InnerGrid == NULL)
 		return ASCII_GRID_NOT_OPEN;
 
-	//if(max <= 0)
-//		return ASCII_GRID_BAD_ARGUMENT;
-
 	InnerGrid->maxFrame = max;
 	return ASCII_GRID_SUCCESS;
 }
+#ifdef ASCII_USE_GD
 static ASCIIGridStatus gridSetFont(ASCIIFont font){
 	switch(font){
 		case ASCII_FONT_TINY:
@@ -253,27 +284,17 @@ static ASCIIGridStatus gridSetFont(ASCIIFont font){
 		case ASCII_FONT_SMALL:
 				InnerGrid->font = gdFontGetSmall();
 			break;
-		case ASCII_FONT_TERM:
-			break;
 		default:
 			return ASCII_GRID_BAD_ARGUMENT;
 	}
-	if(font != ASCII_FONT_TERM)
-		InnerGrid->res = (Dimention){InnerGrid->font->w, InnerGrid->font->h};
-	else
-		InnerGrid->res = (Dimention){1, 1};
+	InnerGrid->res = vectorCreate(InnerGrid->font->w, InnerGrid->font->h);
 
-	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res);
-	InnerGrid->pixels = malloc(sizeof(Color) * (scaledDown.x + 1) * (scaledDown.y + 1));
-	if(!InnerGrid->pixels)
+	InnerGrid->img = gdImageCreateTrueColor(InnerGrid->dim.x, InnerGrid->dim.y);
+	if(!InnerGrid->img)
 		return ASCII_GRID_OUT_OF_MEMORY;
-	if( font != ASCII_FONT_TERM){
-		InnerGrid->img = gdImageCreateTrueColor(InnerGrid->dim.x, InnerGrid->dim.y);
-		if(!InnerGrid->img)
-			return ASCII_GRID_OUT_OF_MEMORY;
-	}
 	return ASCII_GRID_SUCCESS;
 }
+#endif //ASCII_USE_GD
 
 ASCIIGridStatus gridSetCharset(ASCIICharSet set){
 	if(set > 1 || set < 0)

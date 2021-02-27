@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "utill.h"
 #include <unistd.h>
+#include <string.h>
 
 #define MAX_CHARS 60
 #define FULL '='
@@ -38,8 +39,12 @@ void writeOutProgress(int current, int max){
 		loadingCtr = loadingCtr % LOADING_SIZE;
 	}
 
-	printf("working:%c\n%s%s%s", loading[loadingCtr], progress,
-								ASCII_CLEAR_SCREEN, ASCII_MOVE_CURSOR(1, 1) );
+	write(fileno(stdout), "working:", 8);
+	write(fileno(stdout), loading + loadingCtr, 1);
+	write(fileno(stdout), "\n", 1);
+	write(fileno(stdout), progress, strlen(progress));  
+	write(fileno(stdout), ASCII_MOVE_CURSOR(1, 1), ASCII_RESET_CURSOR_SIZE);
+
 	free(progress);	
 }
 
