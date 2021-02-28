@@ -18,10 +18,9 @@ typedef enum{
 } ASCIICharSet;
 
 
-unsigned setFGColor(char* buff, Color foreground);
-unsigned setBGColor(char* buff, Color background);
-void resetColorMode(char* buff);
 
+//prints in colour to buff and returns the number of bytes that was written
+unsigned colorPrint(char *buff, char *content, Color col);
 
 //sets the charset
 void colorSetCharset(ASCIICharSet set);

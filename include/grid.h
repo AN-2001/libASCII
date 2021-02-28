@@ -30,6 +30,16 @@ typedef void (*Update)(Frame frame);
 typedef void (*Setup)();
 typedef unsigned Delay;
 
+#ifndef ASCII_DEBUG
+#define error(type) return _error(type, __FILE__, __LINE__)
+#else
+#define error(type) return type
+#endif
+
+/**
+ * used for debugging errors!
+ * */
+ASCIIGridStatus _error(ASCIIGridStatus status, const char* file, int line);
 
 /**
  * opens the grid, always call this before doing anything

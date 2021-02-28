@@ -9,7 +9,7 @@
 #define HEIGHT 400
 
 //don't change this, it wont be an infinite gif anymore!
-#define MAX_FRAME 209
+#define MAX_FRAME 210
 
 #define ARR_SIZE(arr) ( sizeof(arr) /sizeof(arr[0]) )
 
@@ -69,10 +69,10 @@ Color generate(Position pos, Dimention dim, Frame frame){
 }
 
 int main(){
-	gridOpen_(WIDTH, HEIGHT, setup, update, generate);
+	gridOpen(WIDTH, HEIGHT, setup, update, generate);
 	gridSetMaxFrame(MAX_FRAME);
-	gridSetFrameDelay(5e4);
-	gridDraw("out");
+	gridSetFrameDelay(1e4);
+	gridDraw();
 	gridClose();	
 	return 0;
 }

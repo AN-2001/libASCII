@@ -5,7 +5,6 @@
 #include <gdfonts.h>
 #include <gdfontt.h>
 #endif
-
 #include "grid.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -13,6 +12,8 @@
 #include "outputProgress.h"
 #include <unistd.h>
 #include <string.h>
+#include <signal.h>
+
 static struct asciiGrid{
 	Dimention dim;
 	Frame currentFrame, maxFrame;
@@ -34,8 +35,8 @@ extern inline char colorToChar(Color col);
 static ASCIIGridStatus gridSetFont(ASCIIFont font);
 #endif
 
-
-
+static void handleInterrupt(int sig);
+static void setupSignals();
 
 ASCIIGridStatus gridOpen(unsigned width, unsigned height
 #ifdef ASCII_USE_GD
@@ -78,9 +79,24 @@ ASCIIGridStatus gridOpen(unsigned width, unsigned height
 		return ASCII_GRID_OUT_OF_MEMORY;
 
 	write(fileno(stdout), ASCII_RESET_TERM ASCII_TURN_CURSOR_OFF, ASCII_RESET_TERM_SIZE + ASCII_TURN_CURSOR_OFF_SIZE);
+
+	setupSignals();
 	return ASCII_GRID_SUCCESS;
 }
 
+static void setupSignals(){
+	struct sigaction new_action, old_action;
+	new_action.sa_handler = handleInterrupt;
+	sigemptyset(&new_action.sa_mask);
+	new_action.sa_flags = 0;
+	sigaction(SIGINT, NULL, &old_action);
+	if(old_action.sa_handler != SIG_IGN)
+		sigaction(SIGINT, &new_action, NULL);
+}
+static void handleInterrupt(int sig){
+	gridClose();	
+	exit(0);
+}
 
 static Color generateValue(Position pos){
 	if(InnerGrid == NULL)
@@ -181,8 +197,8 @@ static ASCIIGridStatus printToTerm(){
 			int index = posToIndex(pos, scaledDown.x);
 			Color col = InnerGrid->pixels[index];
 			char colorChar = colorToChar(col);
-			output += setFGColor(output, col);
-			sprintf(output++, "%c", colorChar);
+			char str[2] = {colorChar, '\0'};
+			output += colorPrint(output, str, col);  
 		}
 		sprintf(output++, "\n");
 	}
@@ -202,7 +218,6 @@ ASCIIGridStatus gridDraw(
 		){
 	if(!InnerGrid)
 		return ASCII_GRID_NOT_OPEN;
-
 	gridClear();
 	if(InnerGrid->setup)
 		InnerGrid->setup();

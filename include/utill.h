@@ -12,6 +12,9 @@
 #define ASCII_TURN_CURSOR_ON "\033[?25h"
 #define ASCII_TURN_CURSOR_ON_SIZE 6
 
+
+
+
 //returns the max between two numbers
 inline double maxf(double a1, double a2){
 	if(a1 > a2)
