@@ -50,7 +50,7 @@ static unsigned setFGColor(char* buff, Color foreground){
 	return strlen(s);
 }
 
-unsigned colorPrint(char *buff, char *content, Color fg){
+unsigned colorPrint(char *buff, const char *content, Color fg){
 	unsigned colorCount = setFGColor(buff, fg);
 	buff += colorCount;
 	return colorCount + sprintf(buff, "%s", content);

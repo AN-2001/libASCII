@@ -5,6 +5,7 @@
 #define ASCII_BG "48"
 #define ASCII_RGB ";2"
 #define ASCII_END_ATTR "m"
+#define ASCII_TEXT_COLOR(r,g,b) "\033[38;2;"#r";"#g";"#b"m"
 
 extern const char* current_set;
 extern unsigned current_size;
@@ -20,7 +21,7 @@ typedef enum{
 
 
 //prints in colour to buff and returns the number of bytes that was written
-unsigned colorPrint(char *buff, char *content, Color col);
+unsigned colorPrint(char *buff, const char *content, Color col);
 
 //sets the charset
 void colorSetCharset(ASCIICharSet set);
