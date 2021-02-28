@@ -69,10 +69,12 @@ Color generate(Position pos, Dimention dim, Frame frame){
 }
 
 int main(){
-	gridOpen(WIDTH, HEIGHT, setup, update, generate);
-	gridSetMaxFrame(MAX_FRAME);
-	gridSetFrameDelay(1e4);
-	gridDraw();
-	gridClose();	
+	for(;;){
+		gridOpen(WIDTH, HEIGHT, setup, update, generate);
+		gridSetMaxFrame(MAX_FRAME);
+		gridSetFrameDelay(1e4);
+		gridDraw();
+		gridClose();	
+	}
 	return 0;
 }

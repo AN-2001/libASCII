@@ -25,7 +25,7 @@ typedef enum{
 typedef struct asciiGrid *ASCIIGrid;
 typedef int Frame;
 typedef Color* Pixels;
-typedef Color (*Generator)(Position pos, Dimention dim, Frame frame);
+typedef Color (*Generator)(Position pos, Frame frame);
 typedef void (*Update)(Frame frame);
 typedef void (*Setup)();
 typedef unsigned Delay;
@@ -46,6 +46,10 @@ ASCIIGridStatus gridOpen(unsigned width, unsigned height
 #define gridOpen_(w, h, s, u, g) gridOpen(w, h, ASCII_FONT_MEDIUM_BOLD, s, u, g)
 
 #endif
+
+#define error(type) return _error(type, __func__,__FILE__, __LINE__)
+
+ASCIIGridStatus _error(ASCIIGridStatus status, const char *func, const char *file, int line);
 
 /**
  * draws the grid

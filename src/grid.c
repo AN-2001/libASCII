@@ -35,9 +35,6 @@ extern inline char colorToChar(Color col);
 static ASCIIGridStatus gridSetFont(ASCIIFont font);
 #endif
 
-#define error(type) return _error(type, __func__,__FILE__, __LINE__)
-
-static ASCIIGridStatus _error(ASCIIGridStatus status, const char *func, const char *file, int line);
 static void handleInterrupt(int sig);
 static void setupSignals();
 static const char *statusToStr(ASCIIGridStatus status);
@@ -65,8 +62,9 @@ ASCIIGridStatus gridOpen(unsigned width, unsigned height
 	InnerGrid->update = update;
 	InnerGrid->charSet = ASCII_SET_BIG;
 	InnerGrid->frameDelay = 0;
-	InnerGrid->res = vectorCreate(7, 13);
+	//InnerGrid->res = vectorCreate(7, 13);
 
+	InnerGrid->res = vectorCreate(1, 1);
 #ifdef ASCII_USE_GD
 	if(font != ASCII_FONT_TERM){
 		ASCIIGridStatus status;
@@ -119,7 +117,7 @@ static void handleInterrupt(int sig){
 	gridClose();	
 	exit(0);
 }
-static ASCIIGridStatus _error(ASCIIGridStatus status, const char *func, const char *file, int line){
+ASCIIGridStatus _error(ASCIIGridStatus status, const char *func, const char *file, int line){
 #ifdef ASCII_DEBUG
 	if(status == ASCII_GRID_SUCCESS)
 		return status;
@@ -135,7 +133,7 @@ static Color generateValue(Position pos){
 		return colorCreate(0, 0, 0);	
 	if(InnerGrid->generator == NULL)
 		return colorCreate(0, 0, 0);
-	Color val = InnerGrid->generator(pos, InnerGrid->dim, InnerGrid->currentFrame);
+	Color val = InnerGrid->generator(pos, InnerGrid->currentFrame);
 	Color maxVal = colorCreate(255, 255, 255);
 	double r = val.r / maxVal.r;
 	double g = val.g / maxVal.g;
