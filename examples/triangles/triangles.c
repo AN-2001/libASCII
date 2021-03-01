@@ -43,7 +43,7 @@ void update(Frame frame){
 		triangleTransform(triangles + i, &rotate);
 	}
 }
-Color generate(Position pos, Dimention dim, Frame frame){
+Color generate(Position pos, Frame frame){
 	Color output = colorCreate(0, 0, 0);
 	srand(pos.x + pos.y);
 	for(int i = 0; i < ARR_SIZE(triangles);i++){
@@ -70,10 +70,10 @@ Color generate(Position pos, Dimention dim, Frame frame){
 
 int main(){
 	for(;;){
-		gridOpen(WIDTH, HEIGHT, setup, update, generate);
+		gridOpen_(WIDTH, HEIGHT, setup, update, generate);
 		gridSetMaxFrame(MAX_FRAME);
 		gridSetFrameDelay(1e4);
-		gridDraw();
+		gridDraw(NULL);
 		gridClose();	
 	}
 	return 0;

@@ -1,5 +1,5 @@
 CC := gcc
-fags := -Wall -Werror -pedantic-errors -g
+flags := -Wall -Werror -pedantic-errors  -DASCII_USE_GD
 libs := -L../../ -lascii -lm -lgd
 
 imageToASCII: imageToASCII.c

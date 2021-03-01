@@ -34,6 +34,8 @@ Color colorCreate(double r, double g, double b);
 //multiplies a color by a scalar
 Color colorMult(Color c1, double a);
 
+//converts from HSV to RGB
+Color colorHSVToRGB(int h, int s, int v);
 
 inline char colorToChar(Color col){
 	double brightness = col.r*0.299 + col.g*0.587 + col.b*0.114;

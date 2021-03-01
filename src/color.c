@@ -55,3 +55,26 @@ unsigned colorPrint(char *buff, const char *content, Color fg){
 	buff += colorCount;
 	return colorCount + sprintf(buff, "%s", content);
 }
+
+Color colorHSVToRGB(int h, int s_, int v_){
+	double s = s_ / 255.0;	
+	double v = v_ / 255.0;
+
+	double c = v * s;	
+	double x = c * ( 1 - abs((h / 60) % 2 - 1));
+	double m = v - c;
+	Color rgbPrime;
+	if(h >= 0 && h <= 60)
+		rgbPrime = colorCreate(c, x, 0);
+	if(h >= 60 && h <= 120)
+		rgbPrime = colorCreate(x, c, 0);
+	if(h >= 120 && h <= 180)
+		rgbPrime = colorCreate(0, c, x);
+	if(h >= 180 && h <= 240)
+		rgbPrime = colorCreate(0, x, c);
+	if(h >= 240 && h <= 300)
+		rgbPrime = colorCreate(x, 0, c);
+	if(h >= 300 && h <= 360)
+		rgbPrime = colorCreate(c, 0, x);
+	return colorCreate((rgbPrime.r + m) * 255, (rgbPrime.g + m) * 255, (rgbPrime.b + m) * 255);
+}

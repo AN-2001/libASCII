@@ -5,8 +5,7 @@
 #include <stdlib.h>
 #define BRIGHTNESS 1.5
 gdImagePtr image;
-void error(const char* msg);
-Color generate(Position pos, Dimention dim, Frame frame){
+Color generate(Position pos, Frame frame){
 	int pixel = gdImageGetTrueColorPixel(image, pos.x, pos.y);
 	int r = gdTrueColorGetRed(pixel);
 	int g = gdTrueColorGetGreen(pixel);
@@ -16,15 +15,8 @@ Color generate(Position pos, Dimention dim, Frame frame){
 }
 
 
-void error(const char* msg){
-	fprintf(stderr, "-=-=-=ERROR=-=-=-\n%s\n", msg);
-}
 
 int main(int argc, const char* argv[]){
-	if(argc < 4){
-		error("please use this syntax:\nimageToASCII [inputFile] [fileType {1 for png} {2 for jpeg}] [outputFile]");
-		return 1;
-	}
 
 	const char* inPath = argv[1];
 	const char* imageType = argv[2];
@@ -40,12 +32,12 @@ int main(int argc, const char* argv[]){
 			break;
 	}
 	fclose(img);
-    if(gridOpen(image->sx, image->sy, NULL,  NULL , generate) != ASCII_GRID_SUCCESS){
+    if(gridOpen(image->sx, image->sy, ASCII_FONT_TINY, NULL,  NULL , generate) != ASCII_GRID_SUCCESS){
 		fprintf(stderr, "COULD'T OPEN GRID");    
 		return 1;
 	}
 	gridSetMaxFrame(1);
-	gridDraw();
+	gridDraw("out");
 
 	gridClose();
 	gdImageDestroy(image);
