@@ -23,6 +23,7 @@ typedef enum{
 //prints in colour to buff and returns the number of bytes that was written
 unsigned colorPrint(char *buff, const char *content, Color col);
 
+unsigned colorPrintChar(char *buff, char content, Color col);
 //sets the charset
 void colorSetCharset(ASCIICharSet set);
 //adds two colors 

@@ -1,7 +1,9 @@
 #include "color.h"
+#include "utill.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 //constants
 #define CHAR_COUNT_BIG 70.0
@@ -56,12 +58,23 @@ unsigned colorPrint(char *buff, const char *content, Color fg){
 	return colorCount + sprintf(buff, "%s", content);
 }
 
+unsigned colorPrintChar(char *buff, char content, Color col){
+	unsigned colorCount = setFGColor(buff, col);
+	buff += colorCount;
+	*buff = content;
+	return colorCount + 1;
+}
+
 Color colorHSVToRGB(int h, int s_, int v_){
 	double s = s_ / 255.0;	
 	double v = v_ / 255.0;
+	s = clamp(s, 0, 1.0); 
+	v = clamp(v, 0, 1.0); 
+	h = h % 360;
 
 	double c = v * s;	
-	double x = c * ( 1 - abs((h / 60) % 2 - 1));
+	double h_ = (h / 60.0);
+	double x = c * ( 1 - fabs(fmod(h_, 2) - 1));
 	double m = v - c;
 	Color rgbPrime;
 	if(h >= 0 && h <= 60)
@@ -76,5 +89,5 @@ Color colorHSVToRGB(int h, int s_, int v_){
 		rgbPrime = colorCreate(x, 0, c);
 	if(h >= 300 && h <= 360)
 		rgbPrime = colorCreate(c, 0, x);
-	return colorCreate((rgbPrime.r + m) * 255, (rgbPrime.g + m) * 255, (rgbPrime.b + m) * 255);
+	return colorCreate((rgbPrime.r + m) * 360, (rgbPrime.g + m) * 255, (rgbPrime.b + m) * 255);
 }

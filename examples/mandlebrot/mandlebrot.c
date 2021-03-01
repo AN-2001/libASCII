@@ -3,26 +3,25 @@
 #include <complex.h>
 #include <stdio.h>
 #include <math.h>
-#define INF 32
-//#define MAX_ITER 8e3
-#define WIDTH 400 
-#define HEIGHT 400 
-double ang = 0.13201;
-double MAX_ITER = 0;
+#define INF 2048
+#define MAX_ITER 8e3
+#define WIDTH 1920 
+#define HEIGHT 1080 
+
 Position point;
 Position len;
 complex double mandlebrot(complex double val, complex double offset);
 void setup(){
 	len = vectorCreate(10, 10);
-	double r = 0.25;	
-	point = vectorCreate(r * cos(ang) - 1, r * sin(ang));
+	//double r = 0.25;	
+	//point = vectorCreate(r * cos(ang) - 1, r * sin(ang));
 }
 complex double mandlebrot(complex double val, complex double offset){
 	return val * val + offset;
 }
 Color gen(Position pos, Frame frame){
 	double x = point.x + (double) ((pos.x / WIDTH) - 0.5) * len.x;
-	double y = point.y + (double) ((pos.y / (HEIGHT)) - 0.5) * len.y;
+	double y = point.y + (double) ((pos.y / HEIGHT) - 0.5) * len.y;
 	
 	complex double v = mandlebrot(0, x + y * I);
 	int cur;
@@ -35,9 +34,8 @@ Color gen(Position pos, Frame frame){
 	return colorHSVToRGB(cur % 360, 255, vl);
 }
 void update(Frame frame){
-	len.x *= 0.99;
-	len.y *= 0.99;
-	MAX_ITER += 1;
+	len.x *= 0.97;
+	len.y *= 0.97;
 	gridClear();	
 }
 int main(int argc, char *argv[]){

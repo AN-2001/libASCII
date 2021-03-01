@@ -5,6 +5,7 @@ typedef struct vector{
 	double x,y;
 } Vector;
 
+
 typedef struct vector Direction;
 typedef struct vector Position;
 typedef struct vector Dimention;
