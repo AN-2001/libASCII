@@ -47,7 +47,7 @@ Color colorMult(Color c1, double a){
 static unsigned setFGColor(char* buff, Color foreground){
 	char s[64];
 	sprintf(s, ASCII_START_ATTR ASCII_FG ASCII_RGB ";%d;%d;%d"ASCII_END_ATTR,
-						(int)(foreground.r*255), (int)(foreground.g*255), (int)(foreground.b*255));
+						(int)foreground.r, (int)foreground.g, (int)foreground.b);
 	sprintf(buff, "%s", s);	
 	return strlen(s);
 }
@@ -72,7 +72,7 @@ Color colorHSVToRGB(int h, int s_, int v_){
 	v = clamp(v, 0, 1.0); 
 	h = h % 360;
 
-	double c = v * s;	
+	int c = v * s;	
 	double h_ = (h / 60.0);
 	double x = c * ( 1 - fabs(fmod(h_, 2) - 1));
 	double m = v - c;
@@ -89,5 +89,9 @@ Color colorHSVToRGB(int h, int s_, int v_){
 		rgbPrime = colorCreate(x, 0, c);
 	if(h >= 300 && h <= 360)
 		rgbPrime = colorCreate(c, 0, x);
-	return colorCreate((rgbPrime.r + m) * 360, (rgbPrime.g + m) * 255, (rgbPrime.b + m) * 255);
+	return colorCreate((rgbPrime.r + m) * 255, (rgbPrime.g + m) * 255, (rgbPrime.b + m) * 255);
+}
+
+int colorIsEqual(Color col, Color col1){
+	return (col.r == col1.r) && (col.g == col1.g) && (col.b == col1.b);
 }

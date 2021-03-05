@@ -21,7 +21,7 @@ double board[SCALED_W][SCALED_H];
 double copy[SCALED_W][SCALED_H];
 
 
-Color generate(Position pos, Frame frame){
+Color generate(Position pos){
 	int x = pos.x / W;
 	int y = pos.y / H;
 	double c = board[x][y];
@@ -77,11 +77,12 @@ void cpyBoard(double dest[][SCALED_H], double src[][SCALED_H]){
 		}
 	}
 }
-void update(Frame frame){
+void update( ){
 	cpyBoard(copy, board);
-	if(frame > 50)
+	if(gridGetCurrentFrame() > 50)
 		sim();
 	cpyBoard(board, copy);
+	gridClear(colorCreate(0, 0, 0));
 }
 
 int readImage(const char* path){
@@ -108,6 +109,7 @@ int readImage(const char* path){
 				board[i][j] = 0.0f;
 		}
 	}
+	gdImageDestroy(image);
 	return 0;
 }
 int main(int argc, const char* argv[]){
@@ -122,7 +124,7 @@ int main(int argc, const char* argv[]){
 
 	gridOpen_(WIDTH, HEIGHT, NULL, update, generate);
 	gridSetMaxFrame(300);
-	gridDraw(NULL);
+	gridDraw("output/out");
 	gridClose();
 
 	return 0;

@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #define BRIGHTNESS 1.5
 gdImagePtr image;
-Color generate(Position pos, Frame frame){
+Color generate(Position pos){
 	int pixel = gdImageGetTrueColorPixel(image, pos.x, pos.y);
 	int r = gdTrueColorGetRed(pixel);
 	int g = gdTrueColorGetGreen(pixel);
@@ -36,8 +36,8 @@ int main(int argc, const char* argv[]){
 		fprintf(stderr, "COULD'T OPEN GRID");    
 		return 1;
 	}
-	gridSetMaxFrame(1);
-	gridDraw("out");
+
+	gridDraw(NULL);
 
 	gridClose();
 	gdImageDestroy(image);

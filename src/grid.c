@@ -13,7 +13,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
-
+#define OFF_X 1
 static struct asciiGrid{
 	Dimention dim;
 	Frame currentFrame, maxFrame;
@@ -78,11 +78,13 @@ ASCIIGridStatus gridOpen(unsigned width, unsigned height
 	//fix the grid dimention
 	scaledDown.x = (int)(scaledDown.x);
 	scaledDown.y = (int)(scaledDown.y);
+	if(scaledDown.x == 0 || scaledDown.y == 0)
+		error(ASCII_GRID_TOO_SMALL);
 
 	InnerGrid->dim.x = scaledDown.x * InnerGrid->res.x;	
 	InnerGrid->dim.y = scaledDown.y * InnerGrid->res.y;	
 
-	InnerGrid->pixels = malloc(sizeof(Color) * (scaledDown.x) * (scaledDown.y ));
+	InnerGrid->pixels = malloc(sizeof(Color) * (scaledDown.x) * (scaledDown.y + 1 ));
 	if(!InnerGrid->pixels)
 		error(ASCII_GRID_OUT_OF_MEMORY);
 
@@ -106,6 +108,11 @@ static const char *statusToStr(ASCIIGridStatus status){
 			return "bad argument";
 		case ASCII_GRID_OUT_OF_BOUNDS:
 			return "index out of bounds";
+		case ASCII_GRID_BAD_MAX_FRAME:
+			return "trying to use negative frame count in PNG mode";
+		case ASCII_GRID_TOO_SMALL:
+			return "grid is too small";
+
 		default:
 			return "unknown error";
 	}
@@ -123,6 +130,7 @@ static void handleInterrupt(int sig){
 	gridClose();	
 	exit(0);
 }
+
 ASCIIGridStatus _error(ASCIIGridStatus status, const char *func, const char *file, int line){
 #ifdef ASCII_DEBUG
 	if(status == ASCII_GRID_SUCCESS)
@@ -139,16 +147,12 @@ static Color generateValue(Position pos){
 		return colorCreate(0, 0, 0);	
 	if(InnerGrid->generator == NULL)
 		return colorCreate(0, 0, 0);
-	Color val = InnerGrid->generator(pos, InnerGrid->currentFrame);
-	Color maxVal = colorCreate(255, 255, 255);
-	double r = val.r / maxVal.r;
-	double g = val.g / maxVal.g;
-	double b = val.b / maxVal.b;
-	r = clamp(r, 0.0f, 1.0f); 
-	g = clamp(g, 0.0f, 1.0f); 
-	b = clamp(b, 0.0f, 1.0f); 
+	Color c = InnerGrid->generator(pos);
+	c.r = clamp(c.r, 0, 255);
+	c.g = clamp(c.g, 0, 255);
+	c.b = clamp(c.b, 0, 255);
 
-	return colorCreate(r, g, b);
+	return c;
 }
 
 static ASCIIGridStatus generatePixels(){
@@ -161,10 +165,10 @@ static ASCIIGridStatus generatePixels(){
 
 	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res); 
 
-	for(int j = 0; j < scaledDown.y; j ++){
+	for(int j = 0; j <= scaledDown.y; j ++){
 		for(int i = 0; i < scaledDown.x ; i ++){
 			int index = i + j * scaledDown.x;
-			if(index >= (scaledDown.x * scaledDown.y))
+			if(index >= (scaledDown.x) * (scaledDown.y+1))
 				error(ASCII_GRID_OUT_OF_BOUNDS);
 			
 			Position pos = {i, j};
@@ -187,15 +191,15 @@ static ASCIIGridStatus generateImage(){
 
 	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res);
 
-	for(int j = 0; j < scaledDown.y; j ++){
-		for(int i = 0; i < scaledDown.x; i ++){
+	for(int j = 0; j <= scaledDown.y; j ++){
+		for(int i = 0; i < scaledDown.x ; i ++){
 			int index = i + j * scaledDown.x;
-			if(index >= (scaledDown.x * scaledDown.y))
+			if(index >= (scaledDown.x) * (scaledDown.y+1))
 				error(ASCII_GRID_OUT_OF_BOUNDS);
 
 			Color col = InnerGrid->pixels[index];
 			char colorChar = colorToChar(col);
-			gdImageChar(InnerGrid->img, InnerGrid->font, i * InnerGrid->font->w, j * InnerGrid->font->h, colorChar, gdTrueColor((int)(col.r*255), (int)(col.g*255), (int)(col.b*255)));
+			gdImageChar(InnerGrid->img, InnerGrid->font, i * InnerGrid->font->w + OFF_X, j * InnerGrid->font->h, colorChar, gdTrueColor((int)col.r, (int)col.g, (int)col.b));
 		}
 	}
 	return ASCII_GRID_SUCCESS;
@@ -232,17 +236,24 @@ static ASCIIGridStatus printToTerm(){
 		error(ASCII_GRID_OUT_OF_MEMORY);
 
 	char *start = output;
+	Color lastColor = colorCreate(0, 0, 0);
 
-	for(int j = 0; j < scaledDown.y; j++){
-		for(int i = 0; i < scaledDown.x; i++){
 
+
+	for(int j = 0; j <= scaledDown.y; j ++){
+		for(int i = 0; i < scaledDown.x ; i ++){
 			int index = i + j * scaledDown.x;
-			if(index >= (scaledDown.x * scaledDown.y))
+			if(index >= (scaledDown.x) * (scaledDown.y+1))
 				error(ASCII_GRID_OUT_OF_BOUNDS);
-
 			Color col = InnerGrid->pixels[index];
 			char c = colorToChar(col);
-			output += colorPrintChar(output, c, col);  
+
+			if(colorIsEqual(col, lastColor)){
+				output += sprintf(output, "%c", c);
+			}else{
+				output += colorPrintChar(output, c, col);  
+				lastColor = col;
+			}
 		}
 		sprintf(output++, "\n");
 	}
@@ -262,10 +273,11 @@ ASCIIGridStatus gridDraw(
 		){
 	if(!InnerGrid)
 		error(ASCII_GRID_NOT_OPEN);
-	gridClear();
+	if(InnerGrid->maxFrame < 0 && filepath)
+		error(ASCII_GRID_BAD_MAX_FRAME);
+		
 	if(InnerGrid->setup)
 		InnerGrid->setup();
-
 	do{
 		if(InnerGrid->update)
 			InnerGrid->update(InnerGrid->currentFrame);
@@ -293,7 +305,7 @@ ASCIIGridStatus gridDraw(
 	return ASCII_GRID_SUCCESS;
 }
 
-ASCIIGridStatus gridClear(){
+ASCIIGridStatus gridClear(Color bg){
 	if(!InnerGrid)
 		error(ASCII_GRID_NOT_OPEN);
 #ifdef ASCII_USE_GD
@@ -302,7 +314,7 @@ ASCIIGridStatus gridClear(){
 
 	for(int x = 0; x < InnerGrid->img->sx; x++){
 		for(int y = 0; y < InnerGrid->img->sy; y++){
-			gdImageSetPixel(InnerGrid->img, x, y, gdTrueColorAlpha(0, 0, 0, 0));
+			gdImageSetPixel(InnerGrid->img, x, y, gdTrueColorAlpha((int)bg.r, (int)bg.g, (int)bg.b, 0));
 		}
 	}
 #endif
@@ -366,11 +378,19 @@ ASCIIGridStatus gridSetCharset(ASCIICharSet set){
 }
 
 ASCIIGridStatus gridSetFrameDelay(Delay del){
-	if(InnerGrid == NULL)
+	if(!InnerGrid)
 		error(ASCII_GRID_NOT_OPEN);
+
 	if((int)del < 0)
 		error(ASCII_GRID_BAD_ARGUMENT);
 
 	InnerGrid->frameDelay = del;
 	return ASCII_GRID_SUCCESS;
+}
+
+
+Frame gridGetCurrentFrame(){
+	if(!InnerGrid)
+		error(ASCII_GRID_NOT_OPEN);
+	return InnerGrid->currentFrame;
 }

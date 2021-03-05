@@ -13,23 +13,23 @@ double radii[NUM_BALLS];
 void setup(){
 	for(int i = 0; i < NUM_BALLS; i++){
 		balls[i] = vectorCreate(rand() % WIDTH, rand() % HEIGHT); 
-		dirs[i] = vectorCreate((rand() % 100) / 100.0, (rand() % 100) / 100.0); 
+		dirs[i] = vectorCreate((rand() % 200 - 100.0) / 100.0, (rand() % 200 - 100.0) / 100.0); 
 		radii[i] = rand() % 60 + 40;
 	}
 }
-void update(Frame frame){
+void update(){
 	for(int i = 0; i < NUM_BALLS; i++){
-		balls[i] = vectorAdd(balls[i],  vectorScale(dirs[i], 2));
+		balls[i] = vectorAdd(balls[i],  vectorScale(dirs[i], 0.5));
 		if(balls[i].x > WIDTH || balls[i].x < 0)
 			dirs[i].x *= -1;
 
 		if(balls[i].y > HEIGHT || balls[i].y < 0)
 			dirs[i].y *= -1;
 	}
-	gridClear();
+	gridClear(colorCreate(0, 0, 0));
 }
 
-Color gen(Position pos, Frame frame){
+Color gen(Position pos){
 	double h = 0;
 	
 	for(int i = 0; i < NUM_BALLS; i++){
@@ -41,7 +41,7 @@ Color gen(Position pos, Frame frame){
 
 int main(){
 	gridOpen(WIDTH, HEIGHT, ASCII_FONT_TINY, setup, update, gen); 
-	gridSetMaxFrame(800);
+	gridSetMaxFrame(300);
 	gridDraw("output/out");
 	gridClose();
 	return 0;

@@ -9,6 +9,8 @@ typedef enum{
 	ASCII_GRID_BAD_ARGUMENT,
 	ASCII_GRID_NOT_OPEN,
 	ASCII_GRID_OUT_OF_BOUNDS,
+	ASCII_GRID_TOO_SMALL,
+	ASCII_GRID_BAD_MAX_FRAME,
 	ASCII_GRID_ERROR
 } ASCIIGridStatus;
 
@@ -25,8 +27,8 @@ typedef enum{
 typedef struct asciiGrid *ASCIIGrid;
 typedef int Frame;
 typedef Color* Pixels;
-typedef Color (*Generator)(Position pos, Frame frame);
-typedef void (*Update)(Frame frame);
+typedef Color (*Generator)(Position pos);
+typedef void (*Update)();
 typedef void (*Setup)();
 typedef unsigned Delay;
 
@@ -75,9 +77,14 @@ ASCIIGridStatus gridClose(void);
 ASCIIGridStatus gridSetMaxFrame(Frame max);
 
 /**
- * clears the grid by overwriting everything with black
+ * clears the grid by overwriting everything with the background colour
  * */
-ASCIIGridStatus gridClear(void);
+ASCIIGridStatus gridClear(Color background);
+
+/**
+ * returns the current frame 
+ * */
+Frame gridGetCurrentFrame();
 
 
 /**
