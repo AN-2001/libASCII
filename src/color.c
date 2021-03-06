@@ -65,14 +65,14 @@ unsigned colorPrintChar(char *buff, char content, Color col){
 	return colorCount + 1;
 }
 
-Color colorHSVToRGB(int h, int s_, int v_){
+Color colorHSVToRGB(double h, double s_, double v_){
 	double s = s_ / 255.0;	
 	double v = v_ / 255.0;
 	s = clamp(s, 0, 1.0); 
 	v = clamp(v, 0, 1.0); 
-	h = h % 360;
+	h = fmod(h + ceil(fabs(h/360.0)) * 360,  360);
 
-	int c = v * s;	
+	double c = v * s;	
 	double h_ = (h / 60.0);
 	double x = c * ( 1 - fabs(fmod(h_, 2) - 1));
 	double m = v - c;
@@ -93,5 +93,5 @@ Color colorHSVToRGB(int h, int s_, int v_){
 }
 
 int colorIsEqual(Color col, Color col1){
-	return (col.r == col1.r) && (col.g == col1.g) && (col.b == col1.b);
+	return ((int)col.r == (int)col1.r) && ((int)col.g == (int)col1.g) && ((int)col.b == (int)col1.b);
 }

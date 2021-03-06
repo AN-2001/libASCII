@@ -1,12 +1,12 @@
 #ifndef ASCII_COLOR_H
 #define ASCII_COLOR_H
-#include <stdio.h>
 #define ASCII_START_ATTR "\033["
 #define ASCII_FG "38"
 #define ASCII_BG "48"
 #define ASCII_RGB ";2"
 #define ASCII_END_ATTR "m"
 #define ASCII_TEXT_COLOR(r,g,b) "\033[38;2;"#r";"#g";"#b"m"
+#include "utill.h"
 
 extern const char* current_set;
 extern unsigned current_size;
@@ -37,7 +37,7 @@ Color colorCreate(double r, double g, double b);
 Color colorMult(Color c1, double a);
 
 //converts from HSV to RGB
-Color colorHSVToRGB(int h, int s, int v);
+Color colorHSVToRGB(double h, double s, double v);
 
 int colorIsEqual(Color col, Color col1);
 
@@ -46,10 +46,7 @@ inline char colorToChar(Color col){
 	double brightness = col.r*0.299f + col.g*0.587f + col.b*0.114f;
 	//scale it down
 	brightness = brightness / 255.0f;
-	if(brightness > 1.0f)
-		brightness = 1.0f;
-	if(brightness < 0.0f)
-		brightness = 0.0f;
+	brightness = clamp(brightness, 0.0, 1.0);
 
 	int index = (int)(brightness * (current_size - 1) );
 

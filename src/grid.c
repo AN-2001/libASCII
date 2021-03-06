@@ -13,7 +13,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
-#define OFF_X 1
 static struct asciiGrid{
 	Dimention dim;
 	Frame currentFrame, maxFrame;
@@ -37,6 +36,17 @@ static ASCIIGridStatus gridSetFont(ASCIIFont font);
 
 static void handleInterrupt(int sig);
 static void setupSignals();
+inline static ASCIIGridStatus fixDim(){
+	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res);
+	scaledDown.x = (int)(scaledDown.x);
+	scaledDown.y = (int)(scaledDown.y);
+	if(scaledDown.x == 0 || scaledDown.y == 0)
+		error(ASCII_GRID_TOO_SMALL);
+
+	InnerGrid->dim.x = scaledDown.x * InnerGrid->res.x;	
+	InnerGrid->dim.y = scaledDown.y * InnerGrid->res.y;	
+	return ASCII_GRID_SUCCESS;
+}
 static const char *statusToStr(ASCIIGridStatus status);
 
 ASCIIGridStatus gridOpen(unsigned width, unsigned height
@@ -63,7 +73,12 @@ ASCIIGridStatus gridOpen(unsigned width, unsigned height
 	InnerGrid->update = update;
 	InnerGrid->charSet = ASCII_SET_BIG;
 	InnerGrid->frameDelay = 0;
+
+#ifndef ASCII_USE_GD
 	InnerGrid->res = vectorCreate(7, 13);
+	fixDim();
+#endif
+
 #ifdef ASCII_USE_GD
 	if(font != ASCII_FONT_TERM){
 		ASCIIGridStatus status;
@@ -75,16 +90,7 @@ ASCIIGridStatus gridOpen(unsigned width, unsigned height
 #endif
 
 	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res);
-	//fix the grid dimention
-	scaledDown.x = (int)(scaledDown.x);
-	scaledDown.y = (int)(scaledDown.y);
-	if(scaledDown.x == 0 || scaledDown.y == 0)
-		error(ASCII_GRID_TOO_SMALL);
-
-	InnerGrid->dim.x = scaledDown.x * InnerGrid->res.x;	
-	InnerGrid->dim.y = scaledDown.y * InnerGrid->res.y;	
-
-	InnerGrid->pixels = malloc(sizeof(Color) * (scaledDown.x) * (scaledDown.y + 1 ));
+	InnerGrid->pixels = malloc(sizeof(Color) * (scaledDown.x) * (scaledDown.y));
 	if(!InnerGrid->pixels)
 		error(ASCII_GRID_OUT_OF_MEMORY);
 
@@ -165,10 +171,10 @@ static ASCIIGridStatus generatePixels(){
 
 	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res); 
 
-	for(int j = 0; j <= scaledDown.y; j ++){
+	for(int j = 0; j < scaledDown.y; j ++){
 		for(int i = 0; i < scaledDown.x ; i ++){
 			int index = i + j * scaledDown.x;
-			if(index >= (scaledDown.x) * (scaledDown.y+1))
+			if(index >= (scaledDown.x) * (scaledDown.y))
 				error(ASCII_GRID_OUT_OF_BOUNDS);
 			
 			Position pos = {i, j};
@@ -191,15 +197,15 @@ static ASCIIGridStatus generateImage(){
 
 	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res);
 
-	for(int j = 0; j <= scaledDown.y; j ++){
+	for(int j = 0; j < scaledDown.y; j ++){
 		for(int i = 0; i < scaledDown.x ; i ++){
 			int index = i + j * scaledDown.x;
-			if(index >= (scaledDown.x) * (scaledDown.y+1))
+			if(index >= (scaledDown.x) * (scaledDown.y))
 				error(ASCII_GRID_OUT_OF_BOUNDS);
 
 			Color col = InnerGrid->pixels[index];
 			char colorChar = colorToChar(col);
-			gdImageChar(InnerGrid->img, InnerGrid->font, i * InnerGrid->font->w + OFF_X, j * InnerGrid->font->h, colorChar, gdTrueColor((int)col.r, (int)col.g, (int)col.b));
+			gdImageChar(InnerGrid->img, InnerGrid->font, i * InnerGrid->font->w , j * InnerGrid->font->h, colorChar, gdTrueColor((int)col.r, (int)col.g, (int)col.b));
 		}
 	}
 	return ASCII_GRID_SUCCESS;
@@ -240,10 +246,10 @@ static ASCIIGridStatus printToTerm(){
 
 
 
-	for(int j = 0; j <= scaledDown.y; j ++){
+	for(int j = 0; j < scaledDown.y; j ++){
 		for(int i = 0; i < scaledDown.x ; i ++){
 			int index = i + j * scaledDown.x;
-			if(index >= (scaledDown.x) * (scaledDown.y+1))
+			if(index >= (scaledDown.x) * (scaledDown.y))
 				error(ASCII_GRID_OUT_OF_BOUNDS);
 			Color col = InnerGrid->pixels[index];
 			char c = colorToChar(col);
@@ -360,6 +366,7 @@ static ASCIIGridStatus gridSetFont(ASCIIFont font){
 			error(ASCII_GRID_BAD_ARGUMENT);
 	}
 	InnerGrid->res = vectorCreate(InnerGrid->font->w, InnerGrid->font->h);
+	fixDim();
 
 	InnerGrid->img = gdImageCreateTrueColor(InnerGrid->dim.x, InnerGrid->dim.y);
 	if(!InnerGrid->img)
