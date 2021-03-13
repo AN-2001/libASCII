@@ -31,22 +31,16 @@ inline double minf(double a1, double a2){
 
 //returns the sign of a number
 inline double signf(double n){
-	if(n > 0){
+	if(n > 0)
 		return 1;
-	}
-	if(n < 0){
+	if(n < 0)
 		return -1;
-	}
 	return 0;
 }
 
 //clamps the value
 inline double clamp(double value, double lower, double upper){
-	if(value < lower)
-		return lower;
-	if(value > upper)
-		return upper;
-	return value;
+	return minf(maxf(value,lower), upper);
 }
 
 //turns an x,y pair into an index

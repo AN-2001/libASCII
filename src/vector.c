@@ -1,5 +1,5 @@
 #include "vector.h"
-#include <math.h>
+double sqrt();
 Vector vectorCreate(double x, double y){
 	Vector res;
 	res.x = x;

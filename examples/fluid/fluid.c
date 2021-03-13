@@ -11,7 +11,7 @@
 
 #define ASPECT_W 16
 #define ASPECT_H 9
-#define RATIO 80
+#define RATIO 90
 #define WIDTH (RATIO * ASPECT_W)
 #define HEIGHT (RATIO * ASPECT_H)
 #define SCALED_W (WIDTH / W)
@@ -122,7 +122,7 @@ int main(int argc, const char* argv[]){
 		return 1;
 	}
 
-	gridOpen_(WIDTH, HEIGHT, NULL, update, generate);
+	gridOpen(WIDTH, HEIGHT,ASCII_FONT_SMALL, NULL, update, generate);
 	gridSetMaxFrame(300);
 	gridDraw("output/out");
 	gridClose();

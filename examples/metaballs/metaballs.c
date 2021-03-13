@@ -3,18 +3,20 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdio.h>
+#include <time.h>
 #define WIDTH 400
 #define HEIGHT 400
-#define NUM_BALLS 2
+#define NUM_BALLS 5
 Position balls[NUM_BALLS];
 Direction dirs[NUM_BALLS];
 double radii[NUM_BALLS];
 
 void setup(){
+	srand(time(NULL));
 	for(int i = 0; i < NUM_BALLS; i++){
 		balls[i] = vectorCreate(rand() % WIDTH, rand() % HEIGHT); 
 		dirs[i] = vectorCreate((rand() % 200 - 100.0) / 100.0, (rand() % 200 - 100.0) / 100.0); 
-		radii[i] = rand() % 60 + 40;
+		radii[i] = rand() % 40 + 20;
 	}
 }
 void update(){
@@ -36,13 +38,14 @@ Color gen(Position pos){
 		double m = pow(pos.x - balls[i].x, 2) + pow(pos.y - balls[i].y, 2);
 		h += 1e4 * (radii[i]/m);
 	}
+	h = clamp(h,120,  340);
 	return colorHSVToRGB(h, 255, 255);
 }
 
 int main(){
 	gridOpen(WIDTH, HEIGHT, ASCII_FONT_TINY, setup, update, gen); 
-	gridSetMaxFrame(300);
-	gridDraw("output/out");
+	gridSetMaxFrame(-1);
+	gridDraw(NULL);
 	gridClose();
 	return 0;
 

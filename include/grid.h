@@ -1,28 +1,8 @@
 #ifndef ASCII_GRID_H
 #define ASCII_GRID_H
-#include "vector.h"
-#include "color.h"
-
-typedef enum{
-	ASCII_GRID_OUT_OF_MEMORY,
-	ASCII_GRID_SUCCESS,
-	ASCII_GRID_BAD_ARGUMENT,
-	ASCII_GRID_NOT_OPEN,
-	ASCII_GRID_OUT_OF_BOUNDS,
-	ASCII_GRID_TOO_SMALL,
-	ASCII_GRID_BAD_MAX_FRAME,
-	ASCII_GRID_ERROR
-} ASCIIGridStatus;
-
-#ifdef ASCII_USE_GD
-typedef enum{
-	ASCII_FONT_TINY = 0,
-	ASCII_FONT_MEDIUM_BOLD,
-	ASCII_FONT_GIANT,
-	ASCII_FONT_SMALL,
-	ASCII_FONT_TERM
-} ASCIIFont;
-#endif
+#include "ascii/vector.h"
+#include "ascii/color.h"
+#include "enums.h"
 
 typedef struct asciiGrid *ASCIIGrid;
 typedef int Frame;
