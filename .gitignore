@@ -2,6 +2,6 @@
 *.a
 compile_commands.json
 .clangd/
-.oh_my_zsh/
+.oh-my-zsh/
 
 
