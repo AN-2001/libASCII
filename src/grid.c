@@ -1,10 +1,8 @@
-#ifdef ASCII_USE_GD
 #include <gd.h>
 #include <gdfontmb.h>
 #include <gdfontg.h>
 #include <gdfonts.h>
 #include <gdfontt.h>
-#endif
 #include "grid.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -14,9 +12,22 @@
 #include <string.h>
 #include <signal.h>
 #include "drawing.h"
+#include <math.h>
+
+#define INDEX(x, y, w) (int)((int)(x) + (int)(y) * (w))
 
 //TODO: add perlin noise
 //TODO: refactor how iteration is done
+
+extern inline char colorToChar(Color col);
+static ASCIIGridStatus setupFont(ASCIIFont font);
+static void handleInterrupt(int sig);
+static void setupSignals();
+static ASCIIGridStatus clear();
+static ASCIIGridStatus clearImage();
+static ASCIIGridStatus clearPixels();
+inline static ASCIIGridStatus fixDim();
+static const char *statusToStr(ASCIIGridStatus status);
 
 static struct asciiGrid{
 	Dimention dim;
@@ -26,47 +37,17 @@ static struct asciiGrid{
 	Generator generator;
 	Update update;
 	Setup setup;
-#ifdef ASCII_USE_GD
 	gdFontPtr font;
 	gdImagePtr img;
-#endif
 	ASCIICharSet charSet;
 	Delay frameDelay;
 	int shouldClear;
 	Color clearColor;
 }* InnerGrid = NULL;
-#define INDEX(x, y, w) (int)((int)(x) + (int)(y) * (w))
-extern inline char colorToChar(Color col);
 
-#ifdef ASCII_USE_GD
-static ASCIIGridStatus gridSetFont(ASCIIFont font);
-#endif
-static void handleInterrupt(int sig);
-static void setupSignals();
-static ASCIIGridStatus clear();
-static ASCIIGridStatus clearImage();
-static ASCIIGridStatus clearPixels();
-inline static ASCIIGridStatus fixDim(){
-	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res);
-	scaledDown.x = (int)(scaledDown.x);
-	scaledDown.y = (int)(scaledDown.y);
-	if(scaledDown.x == 0 || scaledDown.y == 0)
-		error(ASCII_GRID_TOO_SMALL);
 
-	InnerGrid->dim.x = scaledDown.x * InnerGrid->res.x;	
-	InnerGrid->dim.y = scaledDown.y * InnerGrid->res.y;	
-	return ASCII_GRID_SUCCESS;
-}
-static const char *statusToStr(ASCIIGridStatus status);
-
-ASCIIGridStatus gridOpen(unsigned width, unsigned height
-#ifdef ASCII_USE_GD
-		, ASCIIFont font
-#endif
-		, Setup setup, Update update, Generator gen){
-	if(width == 0 || height == 0)
-		error(ASCII_GRID_BAD_ARGUMENT);
-
+ASCIIGridStatus gridOpen(unsigned width, unsigned height, ASCIIFont font, Setup setup, Update update, Generator gen){
+	if(width == 0 || height == 0) error(ASCII_GRID_BAD_ARGUMENT); 
 	InnerGrid = malloc(sizeof(*InnerGrid));	
 	if(!InnerGrid)
 		error(ASCII_GRID_OUT_OF_MEMORY);
@@ -82,32 +63,27 @@ ASCIIGridStatus gridOpen(unsigned width, unsigned height
 	InnerGrid->charSet = ASCII_SET_BIG;
 	InnerGrid->frameDelay = 0;
 
-#ifndef ASCII_USE_GD
-	InnerGrid->res = vectorCreate(7, 13);
-	fixDim();
-#endif
 
-#ifdef ASCII_USE_GD
-	if(font != ASCII_FONT_TERM){
-		ASCIIGridStatus status;
-		if((status = gridSetFont(font)) != ASCII_GRID_SUCCESS){
-			gridClose();
-			error(status);
-		}
+
+	ASCIIGridStatus status;
+	if((status = setupFont(font)) != ASCII_GRID_SUCCESS){
+		gridClose();
+		error(status);
 	}
-#endif
 
 	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res);
 	InnerGrid->pixels = malloc(sizeof(Color) * (scaledDown.x) * (scaledDown.y));
-	if(!InnerGrid->pixels)
+	if(!InnerGrid->pixels){
+		gridClose();
 		error(ASCII_GRID_OUT_OF_MEMORY);
+	}
 
 	write(fileno(stdout), ASCII_RESET_TERM ASCII_TURN_CURSOR_OFF, ASCII_RESET_TERM_SIZE + ASCII_TURN_CURSOR_OFF_SIZE);
 
 	setupSignals();
 	return ASCII_GRID_SUCCESS;
 }
-
+//TODO:maybe use a lookup table?
 static const char *statusToStr(ASCIIGridStatus status){
 	switch(status){
 		case ASCII_GRID_SUCCESS:
@@ -198,7 +174,6 @@ static ASCIIGridStatus generatePixels(){
 	return ASCII_GRID_SUCCESS;
 }
 
-#ifdef ASCII_USE_GD
 static ASCIIGridStatus generateImage(){
 	if(InnerGrid == NULL)
 		error(ASCII_GRID_NOT_OPEN);
@@ -244,7 +219,6 @@ static ASCIIGridStatus drawToImage(const char* filepath){
 
 	return ASCII_GRID_SUCCESS;
 }
-#endif //ASCII_USE_GD
 
 static ASCIIGridStatus printToTerm(){
 	if(InnerGrid == NULL)
@@ -284,15 +258,10 @@ static ASCIIGridStatus printToTerm(){
 	return ASCII_GRID_SUCCESS;
 }
 
-ASCIIGridStatus gridDraw(
-#ifdef ASCII_USE_GD
-		const char* filepath
-#else
-		void
-#endif
-		){
+ASCIIGridStatus gridDraw(const char* filepath){
 	if(!InnerGrid)
 		error(ASCII_GRID_NOT_OPEN);
+
 	if(InnerGrid->maxFrame < 0 && filepath)
 		error(ASCII_GRID_BAD_MAX_FRAME);
 		
@@ -307,19 +276,13 @@ ASCIIGridStatus gridDraw(
 		if(InnerGrid->generator)
 			generatePixels();
 
-#ifdef ASCII_USE_GD
 		if(!filepath){
 			printToTerm();
 			usleep(InnerGrid->frameDelay);
-		}
-		else{
+		}else{
 			drawToImage(filepath);
 			writeOutProgress(InnerGrid->currentFrame, InnerGrid->maxFrame);
 		}
-#else
-		printToTerm();
-		usleep(InnerGrid->frameDelay);
-#endif //ASCII_USE_GD
 		InnerGrid->currentFrame++;
 
 
@@ -332,7 +295,6 @@ ASCIIGridStatus clearImage(){
 
 	if(!InnerGrid)
 		error(ASCII_GRID_NOT_OPEN);
-#ifdef ASCII_USE_GD
 	if(!InnerGrid->img)
 		return ASCII_GRID_SUCCESS;
 	Color bg = InnerGrid->clearColor;
@@ -341,7 +303,6 @@ ASCIIGridStatus clearImage(){
 			gdImageSetPixel(InnerGrid->img, x, y, gdTrueColorAlpha((int)bg.r, (int)bg.g, (int)bg.b, 0));
 		}
 	}
-#endif
 	return ASCII_GRID_SUCCESS;
 }
 
@@ -349,6 +310,7 @@ ASCIIGridStatus clearPixels(){
 
 	if(!InnerGrid)
 		error(ASCII_GRID_NOT_OPEN);
+
 
 	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res); 
 	for(int j = 0; j < scaledDown.y; j ++){
@@ -364,7 +326,12 @@ ASCIIGridStatus clearPixels(){
 ASCIIGridStatus clear(){
 	if(!InnerGrid)
 		error(ASCII_GRID_NOT_OPEN);
-	ASCIIGridStatus s1 = clearImage(), s2 = clearPixels();
+	ASCIIGridStatus s1 = ASCII_GRID_SUCCESS;
+	ASCIIGridStatus s2 = clearPixels();
+
+	if(InnerGrid->img){
+		s1 = clearImage();
+	}
 	if(s1 != ASCII_GRID_SUCCESS || s2 != ASCII_GRID_SUCCESS)
 		error(ASCII_GRID_ERROR);
 	InnerGrid->shouldClear = 0;
@@ -382,10 +349,13 @@ ASCIIGridStatus gridClose(){
 	if(InnerGrid == NULL)
 		error(ASCII_GRID_NOT_OPEN);
 
-#ifdef ASCII_USE_GD
-	gdImageDestroy(InnerGrid->img);
-#endif
+	if(InnerGrid->img){
+		gdImageDestroy(InnerGrid->img);
+		InnerGrid->img = NULL;
+	}
+
 	free(InnerGrid->pixels);
+	InnerGrid->pixels = NULL;
 	free(InnerGrid);
 
 	write(fileno(stdout), ASCII_TURN_CURSOR_ON, ASCII_TURN_CURSOR_ON_SIZE);
@@ -399,8 +369,8 @@ ASCIIGridStatus gridSetMaxFrame( Frame max){
 	InnerGrid->maxFrame = max;
 	return ASCII_GRID_SUCCESS;
 }
-#ifdef ASCII_USE_GD
-static ASCIIGridStatus gridSetFont(ASCIIFont font){
+//TODO: use a lookup table
+static ASCIIGridStatus setupFont(ASCIIFont font){
 	switch(font){
 		case ASCII_FONT_TINY:
 				InnerGrid->font = gdFontGetTiny();
@@ -414,6 +384,10 @@ static ASCIIGridStatus gridSetFont(ASCIIFont font){
 		case ASCII_FONT_SMALL:
 				InnerGrid->font = gdFontGetSmall();
 			break;
+		case ASCII_FONT_TERM:
+			InnerGrid->res = vectorCreate(7, 13);
+			fixDim();
+			return ASCII_GRID_SUCCESS;
 		default:
 			error(ASCII_GRID_BAD_ARGUMENT);
 	}
@@ -426,7 +400,6 @@ static ASCIIGridStatus gridSetFont(ASCIIFont font){
 
 	return ASCII_GRID_SUCCESS;
 }
-#endif //ASCII_USE_GD
 
 ASCIIGridStatus gridSetCharset(ASCIICharSet set){
 	if(set > 1 || set < 0)
@@ -448,14 +421,21 @@ ASCIIGridStatus gridSetFrameDelay(Delay del){
 }
 
 
-Frame gridGetCurrentFrame(){
-	if(!InnerGrid)
-		error(ASCII_GRID_NOT_OPEN);
-	return InnerGrid->currentFrame;
+inline ASCIIGridStatus fixDim(){
+	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res);
+	scaledDown.x = (int)(scaledDown.x);
+	scaledDown.y = (int)(scaledDown.y);
+	if(scaledDown.x == 0 || scaledDown.y == 0)
+		error(ASCII_GRID_TOO_SMALL);
+
+	InnerGrid->dim.x = scaledDown.x * InnerGrid->res.x;	
+	InnerGrid->dim.y = scaledDown.y * InnerGrid->res.y;	
+	return ASCII_GRID_SUCCESS;
 }
+
 //  DRAW FUNCTIONS
 
-ASCIIGridStatus gridSetPixel(Position pos, Color col){
+ASCIIGridStatus gridDrawPoint(Position pos, Color col){
 	if(!InnerGrid)
 		error(ASCII_GRID_NOT_OPEN);
 	pos = DimentionScale(pos, InnerGrid->res); 
@@ -468,4 +448,82 @@ ASCIIGridStatus gridSetPixel(Position pos, Color col){
 
 	InnerGrid->pixels[INDEX(pos.x, pos.y, scaledDown.x)] = col; 
 	return ASCII_GRID_SUCCESS;
+}
+
+ASCIIGridStatus gridDrawEllipse(Position centre, Dimention dim, Color col){
+	if(!InnerGrid)
+		error(ASCII_GRID_NOT_OPEN);
+	Position p1, p2, p3, p4;
+	for(double ang = 0; ang <= M_PI/2; ang += 0.01){
+		//use symmetry to reduce sin, cos calls!
+		p1 = vectorCreate(dim.x * cos(ang), dim.y * sin(ang));
+		p2 = vectorCreate(p1.x, -p1.y);
+		p3 = vectorCreate(-p1.x, p1.y);
+		p4 = vectorCreate(-p1.x, -p1.y);
+		//offset them 	
+		p1 = vectorAdd(centre, p1); p2 = vectorAdd(centre, p2);
+		p3 = vectorAdd(centre, p3); p4 = vectorAdd(centre, p4);
+	
+		//fill in a straight line 
+		gridDrawLine(p1, p2, col);
+		gridDrawLine(p3, p4, col);
+	}
+
+	return ASCII_GRID_SUCCESS;
+}
+
+ASCIIGridStatus gridDrawLine(Position start, Position end, Color col){
+
+	double offX = ((int)start.x/(int)InnerGrid->res.x) * (int)InnerGrid->res.x,
+		   offY = ((int)start.y/(int)InnerGrid->res.y) * (int)InnerGrid->res.y;
+
+
+	start = vectorCreate(offX, offY);
+
+	offX = ((int)end.x/(int)InnerGrid->res.x) * (int)InnerGrid->res.x;
+	offY = ((int)end.y/(int)InnerGrid->res.y) * (int)InnerGrid->res.y;
+
+	end = vectorCreate(offX, offY);
+
+
+
+
+	if(end.x == start.x){
+		for(double k = minf(start.y, end.y); k < maxf(start.y, end.y); k += InnerGrid->res.y)
+			gridDrawPoint(vectorCreate(start.x, k), col);
+		return ASCII_GRID_SUCCESS;
+	}
+
+	if(end.y == start.y){
+		for(double k = minf(start.x, end.x); k < maxf(start.x, end.x); k += InnerGrid->res.x)
+			gridDrawPoint(vectorCreate(k, start.y), col);
+		return ASCII_GRID_SUCCESS;
+	}
+	while(1){
+		gridDrawPoint(start, col);
+
+		double gradX = (end.y - start.y) / (end.x - start.x);
+		double gradY = (end.x - start.x) / (end.y - start.y);
+		double x = InnerGrid->res.x * signf(end.x - start.x);
+		double y = InnerGrid->res.y * signf(end.y - start.y);
+		double movX = gradX * x;
+		double movY = gradY * y;
+		if(fabs(movY) < fabs(movX)){
+			start.x += movY;
+			start.y += y;
+		}else{
+			start.y += movX;
+			start.x += x; 
+		}
+
+		int x1 = ((int)start.x / (int)InnerGrid->res.x) * (int)InnerGrid->res.x,
+		    x2 = ((int)end.x / (int)InnerGrid->res.x) * (int)InnerGrid->res.x,
+			y1 = ((int)start.y / (int)InnerGrid->res.y) * (int)InnerGrid->res.y,
+		 	y2 = ((int)end.y / (int)InnerGrid->res.y) * (int)InnerGrid->res.y;
+
+		if(x1 == x2 && y1 == y2)
+			break;
+	}
+	return ASCII_GRID_SUCCESS;
+
 }

@@ -33,12 +33,12 @@ void setup(){
 
 	}
 }
-void update(){
+void update(Frame f){
 	gridClear(colorCreate(0, 0, 0));
 	//rotate the triangles and move them using dirs
 	for(int i = 0; i < ARR_SIZE(triangles); i++){
 		int div = MAX_FRAME / ARR_SIZE(dirs[0]);
-		Vector arr[3] = {{cos(0.03), sin(0.03)}, {-sin(0.03), cos(0.03)}, dirs[i][gridGetCurrentFrame() / div]};
+		Vector arr[3] = {{cos(0.03), sin(0.03)}, {-sin(0.03), cos(0.03)}, dirs[i][f / div]};
 		Mat2x3 rotate = mat2x3Create(arr);		
 		triangleTransform(triangles + i, &rotate);
 	}
@@ -70,7 +70,7 @@ Color generate(Position pos){
 
 int main(){
 	for(;;){
-		gridOpen_(WIDTH, HEIGHT, setup, update, generate);
+		gridOpenTerm(WIDTH, HEIGHT, setup, update, generate);
 		gridSetMaxFrame(MAX_FRAME);
 		gridSetFrameDelay(1e4);
 		gridDraw(NULL);

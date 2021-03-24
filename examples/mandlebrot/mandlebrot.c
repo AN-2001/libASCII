@@ -9,8 +9,8 @@
 
 #define INF 64
 #define MAX_ITER 2e3 
-#define WIDTH 128 
-#define HEIGHT 64 
+#define WIDTH 800 
+#define HEIGHT 800 
 
 Position point;
 Position len;
@@ -70,7 +70,6 @@ void update(Frame frame){
 	}
 	point.x += mouse.x * 0.01f * len.x * 0.1f;
 	point.y -= mouse.y * 0.01f * len.y * 0.1f;
-	//gridClear(colorCreate(0, 0, 0));	
 }
 int main(int argc, char *argv[]){
 	if(argc == 3)

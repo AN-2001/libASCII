@@ -18,9 +18,9 @@ Color gen(Position pos){
 
 
 int main(){
-	gridOpen_(W, H, NULL, NULL, gen);
-	
-	gridDraw("out");
+	gridOpenTerm(W, H, NULL, NULL, gen);
+	gridSetMaxFrame(-1);	
+	gridDraw(NULL);
 	gridClose();
 	return 0;
 }

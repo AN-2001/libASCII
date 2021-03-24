@@ -1,5 +1,5 @@
 #include "vector.h"
-double sqrt();
+#include "math.h"
 Vector vectorCreate(double x, double y){
 	Vector res;
 	res.x = x;
@@ -34,7 +34,10 @@ double vectorMag(Vector vec){
 }
 
 Vector vectorNormalized(Vector vec){
-	return vectorScale(vec, 1 / vectorMag(vec));
+	double mag = vectorMag(vec);
+	if(mag == 0)
+		return vectorCreate(0, 0);
+	return vectorScale(vec, 1.0 / mag);
 }
 
 

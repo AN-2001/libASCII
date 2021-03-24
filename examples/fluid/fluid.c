@@ -77,12 +77,11 @@ void cpyBoard(double dest[][SCALED_H], double src[][SCALED_H]){
 		}
 	}
 }
-void update( ){
+void update(Frame f ){
 	cpyBoard(copy, board);
-	if(gridGetCurrentFrame() > 50)
+	if(f > 50)
 		sim();
 	cpyBoard(board, copy);
-	gridClear(colorCreate(0, 0, 0));
 }
 
 int readImage(const char* path){

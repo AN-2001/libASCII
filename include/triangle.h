@@ -18,4 +18,5 @@ int triangleIsPointInside(Triangle triangle, Position point);
 void triangleTransform(Triangle * const triangle, Mat2x3 const * const mat);
 //copies a triangle, mulitplies it by a matrix, returns the copy
 Triangle triangleTransformed(Triangle triangle, Mat2x3 const * const mat);
+
 #endif //ASCII_TRIANGLE_H

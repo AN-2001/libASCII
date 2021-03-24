@@ -6,7 +6,7 @@
 #include <time.h>
 #define WIDTH 400
 #define HEIGHT 400
-#define NUM_BALLS 5
+#define NUM_BALLS 3
 Position balls[NUM_BALLS];
 Direction dirs[NUM_BALLS];
 double radii[NUM_BALLS];
@@ -28,7 +28,6 @@ void update(){
 		if(balls[i].y > HEIGHT || balls[i].y < 0)
 			dirs[i].y *= -1;
 	}
-	gridClear(colorCreate(0, 0, 0));
 }
 
 Color gen(Position pos){
@@ -43,7 +42,7 @@ Color gen(Position pos){
 }
 
 int main(){
-	gridOpen(WIDTH, HEIGHT, ASCII_FONT_TINY, setup, update, gen); 
+	gridOpenTerm(WIDTH, HEIGHT, setup, update, gen); 
 	gridSetMaxFrame(-1);
 	gridDraw(NULL);
 	gridClose();

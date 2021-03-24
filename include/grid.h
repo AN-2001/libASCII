@@ -1,15 +1,15 @@
 #ifndef ASCII_GRID_H
 #define ASCII_GRID_H
-#include "ascii/vector.h"
-#include "ascii/color.h"
+#include "vector.h"
+#include "color.h"
 #include "enums.h"
 
 typedef struct asciiGrid *ASCIIGrid;
 typedef int Frame;
 typedef Color* Pixels;
 typedef Color (*Generator)(Position pos);
-typedef void (*Update)();
-typedef void (*Setup)();
+typedef void (*Update)(Frame frame);
+typedef void (*Setup)(void);
 typedef unsigned Delay;
 
 
@@ -17,17 +17,9 @@ typedef unsigned Delay;
  * opens the grid, always call this before doing anything
  * it initializes the library!
  * */
-ASCIIGridStatus gridOpen(unsigned width, unsigned height
-#ifdef ASCII_USE_GD
-		, ASCIIFont font
-#endif
-		, Setup setup, Update update, Generator gen);
-
-#ifdef ASCII_USE_GD
-
-#define gridOpen_(w, h, s, u, g) gridOpen(w, h, ASCII_FONT_MEDIUM_BOLD, s, u, g)
-
-#endif
+ASCIIGridStatus gridOpen(unsigned width, unsigned height, ASCIIFont font, Setup setup, Update update, Generator gen);
+#define gridOpenImg(width, height, setup, update, generate) gridOpen(width, height, ASCII_FONT_MEDIUM_BOLD, setup, update, generate)
+#define gridOpenTerm(width, height, setup, update, generate) gridOpen(width, height, ASCII_FONT_TERM, setup, update, generate)
 
 #define error(type) return _error(type, __func__,__FILE__, __LINE__)
 
@@ -38,13 +30,7 @@ ASCIIGridStatus _error(ASCIIGridStatus status, const char *func, const char *fil
  * @filepath: the file path for the output image, if set to NULL output will be 
  * 			  to stdout
  * */
-ASCIIGridStatus gridDraw(
-#ifdef ASCII_USE_GD
-		const char* filepath
-#else
-		void
-#endif
-		);
+ASCIIGridStatus gridDraw(const char *filepath);
 
 /**
  * frees the grid's memory
@@ -60,11 +46,6 @@ ASCIIGridStatus gridSetMaxFrame(Frame max);
  * clears the grid by overwriting everything with the background colour
  * */
 ASCIIGridStatus gridClear(Color background);
-
-/**
- * returns the current frame 
- * */
-Frame gridGetCurrentFrame();
 
 
 /**

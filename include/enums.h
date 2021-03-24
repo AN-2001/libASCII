@@ -14,7 +14,6 @@ typedef enum{
 	ASCII_GRID_ERROR
 } ASCIIGridStatus;
 
-#ifdef ASCII_USE_GD
 typedef enum{
 	ASCII_FONT_TINY = 0,
 	ASCII_FONT_MEDIUM_BOLD,
@@ -22,6 +21,5 @@ typedef enum{
 	ASCII_FONT_SMALL,
 	ASCII_FONT_TERM
 } ASCIIFont;
-#endif
 
 #endif
