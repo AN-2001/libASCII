@@ -1,7 +1,10 @@
-#ifndef INPUT_H
-#define INPUT_H
+#ifndef ASCII_INPUT_H
+#define ASCII_INPUT_H
 
+#include "joystick.h"
 
+ASCIIBtnState gridGetButton(ASCIIBtn button);
 
+ASCIIAxisState gridGetAxis(ASCIIAxisState axis);
 
-#endif //INPUT_H
+#endif //ASCII_INPUT_H

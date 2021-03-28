@@ -39,8 +39,9 @@ Color colorMult(Color c1, double a);
 //converts from HSV to RGB
 Color colorHSVToRGB(double h, double s, double v);
 
-int colorIsEqual(Color col, Color col1);
-
+inline int colorIsEqual(Color col, Color col1){
+	return ((int)col.r == (int)col1.r) && ((int)col.g == (int)col1.g) && ((int)col.b == (int)col1.b);
+}
 inline char colorToChar(Color col){
 	//calculate brightness
 	double brightness = col.r*0.299f + col.g*0.587f + col.b*0.114f;

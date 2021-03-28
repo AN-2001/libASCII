@@ -2,11 +2,11 @@ CC := gcc
 lib := ascii
 include := include
 src := src
-flags := -Wall -Werror -pedantic-errors -I$(include) -I.  -DASCII_DEBUG -g
+flags := -Wall -Werror -pedantic-errors -I$(include) -I.  -DASCII_DEBUG
 output := libascii.a
 include_path := /usr/include
 lib_path := /usr/local/lib
-obj := grid.o vector.o color.o ray.o triangle.o utill.o mat2x3.o outputProgress.o
+obj := grid.o vector.o color.o ray.o utill.o mat2x3.o outputProgress.o joystick.o 
 
 all: $(obj)
 	ar rcs $(output) $^

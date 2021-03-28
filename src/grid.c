@@ -1,17 +1,19 @@
+#include "include/grid.h"
+#include "include/drawing.h"
+#include "include/utill.h"
+#include "include/joystick.h"
+#include "include/outputProgress.h"
+#include "include/input.h"
 #include <gd.h>
 #include <gdfontmb.h>
 #include <gdfontg.h>
 #include <gdfonts.h>
 #include <gdfontt.h>
-#include "grid.h"
 #include <stdlib.h>
 #include <stdio.h>
-#include "utill.h"
-#include "outputProgress.h"
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
-#include "drawing.h"
 #include <math.h>
 
 #define INDEX(x, y, w) (int)((int)(x) + (int)(y) * (w))
@@ -41,6 +43,7 @@ static struct asciiGrid{
 	gdImagePtr img;
 	ASCIICharSet charSet;
 	Delay frameDelay;
+	ASCIIJoyStick joystick;
 	int shouldClear;
 	Color clearColor;
 }* InnerGrid = NULL;
@@ -62,8 +65,7 @@ ASCIIGridStatus gridOpen(unsigned width, unsigned height, ASCIIFont font, Setup 
 	InnerGrid->update = update;
 	InnerGrid->charSet = ASCII_SET_BIG;
 	InnerGrid->frameDelay = 0;
-
-
+	InnerGrid->shouldClear = 1;
 
 	ASCIIGridStatus status;
 	if((status = setupFont(font)) != ASCII_GRID_SUCCESS){
@@ -78,7 +80,11 @@ ASCIIGridStatus gridOpen(unsigned width, unsigned height, ASCIIFont font, Setup 
 		error(ASCII_GRID_OUT_OF_MEMORY);
 	}
 
+	memset(InnerGrid->pixels, 0, sizeof(Color) * (scaledDown.x * scaledDown.y));
+
 	write(fileno(stdout), ASCII_RESET_TERM ASCII_TURN_CURSOR_OFF, ASCII_RESET_TERM_SIZE + ASCII_TURN_CURSOR_OFF_SIZE);
+	
+	InnerGrid->joystick = ASCIIJoyStickCreate();
 
 	setupSignals();
 	return ASCII_GRID_SUCCESS;
@@ -267,7 +273,11 @@ ASCIIGridStatus gridDraw(const char* filepath){
 		
 	if(InnerGrid->setup)
 		InnerGrid->setup();
+
+	if(InnerGrid->joystick)
+		ASCIIJoyStickStart(InnerGrid->joystick);
 	do{
+
 		if(InnerGrid->shouldClear)
 			clear();
 		if(InnerGrid->update)
@@ -356,10 +366,16 @@ ASCIIGridStatus gridClose(){
 
 	free(InnerGrid->pixels);
 	InnerGrid->pixels = NULL;
+
+	if(InnerGrid->joystick){
+		ASCIIJoyStickStop(InnerGrid->joystick);
+		ASCIIJoyStickDestroy(InnerGrid->joystick);
+		InnerGrid->joystick = NULL;
+	}
+
 	free(InnerGrid);
 
 	write(fileno(stdout), ASCII_TURN_CURSOR_ON, ASCII_TURN_CURSOR_ON_SIZE);
-
 	return ASCII_GRID_SUCCESS;
 }
 ASCIIGridStatus gridSetMaxFrame( Frame max){
@@ -445,8 +461,11 @@ ASCIIGridStatus gridDrawPoint(Position pos, Color col){
 
 	if(pos.y < 0 || pos.y >= scaledDown.y)
 		return ASCII_GRID_SUCCESS;
-
-	InnerGrid->pixels[INDEX(pos.x, pos.y, scaledDown.x)] = col; 
+	int index = INDEX(pos.x, pos.y, scaledDown.x);
+	//this is just a redundency to make sure it doesn't break!
+	if(index < 0 || index > scaledDown.x * scaledDown.y)
+		return ASCII_GRID_SUCCESS;
+	InnerGrid->pixels[index] = col; 
 	return ASCII_GRID_SUCCESS;
 }
 
@@ -454,7 +473,7 @@ ASCIIGridStatus gridDrawEllipse(Position centre, Dimention dim, Color col){
 	if(!InnerGrid)
 		error(ASCII_GRID_NOT_OPEN);
 	Position p1, p2, p3, p4;
-	for(double ang = 0; ang <= M_PI/2; ang += 0.01){
+	for(double ang = 0; ang <= M_PI/2; ang += 0.01f){
 		//use symmetry to reduce sin, cos calls!
 		p1 = vectorCreate(dim.x * cos(ang), dim.y * sin(ang));
 		p2 = vectorCreate(p1.x, -p1.y);
@@ -474,20 +493,6 @@ ASCIIGridStatus gridDrawEllipse(Position centre, Dimention dim, Color col){
 
 ASCIIGridStatus gridDrawLine(Position start, Position end, Color col){
 
-	double offX = ((int)start.x/(int)InnerGrid->res.x) * (int)InnerGrid->res.x,
-		   offY = ((int)start.y/(int)InnerGrid->res.y) * (int)InnerGrid->res.y;
-
-
-	start = vectorCreate(offX, offY);
-
-	offX = ((int)end.x/(int)InnerGrid->res.x) * (int)InnerGrid->res.x;
-	offY = ((int)end.y/(int)InnerGrid->res.y) * (int)InnerGrid->res.y;
-
-	end = vectorCreate(offX, offY);
-
-
-
-
 	if(end.x == start.x){
 		for(double k = minf(start.y, end.y); k < maxf(start.y, end.y); k += InnerGrid->res.y)
 			gridDrawPoint(vectorCreate(start.x, k), col);
@@ -499,31 +504,88 @@ ASCIIGridStatus gridDrawLine(Position start, Position end, Color col){
 			gridDrawPoint(vectorCreate(k, start.y), col);
 		return ASCII_GRID_SUCCESS;
 	}
-	while(1){
-		gridDrawPoint(start, col);
 
-		double gradX = (end.y - start.y) / (end.x - start.x);
-		double gradY = (end.x - start.x) / (end.y - start.y);
-		double x = InnerGrid->res.x * signf(end.x - start.x);
-		double y = InnerGrid->res.y * signf(end.y - start.y);
-		double movX = gradX * x;
-		double movY = gradY * y;
-		if(fabs(movY) < fabs(movX)){
-			start.x += movY;
-			start.y += y;
+	int dirX = signf(end.x - start.x),
+		dirY = signf(end.y - start.y);
+	Vector stepX ,stepY;
+	double posX = (dirX < 0 ? fmod(start.x, InnerGrid->res.x) : InnerGrid->res.x - fmod(start.x, InnerGrid->res.x)),
+		   posY = (dirY < 0 ? InnerGrid->res.y - fmod(start.y, InnerGrid->res.y) : fmod(start.y, InnerGrid->res.y));
+	double gradX = (end.y - start.y) / (end.x - start.x),
+		   gradY = (end.x - start.x) / (end.y - start.y);
+
+	stepX = vectorCreate(posX * dirX, gradX * posX * dirX);
+	stepY = vectorCreate(gradY * posY * dirY,  posY * dirY);
+
+	while(1){
+
+		if(vectorMag(stepX) < vectorMag(stepY)){
+			start = vectorAdd(start, stepX); 
+			stepY = vectorSub(stepY, stepX);
+			stepX = vectorCreate(InnerGrid->res.x * dirX, gradX * InnerGrid->res.x * dirX);
 		}else{
-			start.y += movX;
-			start.x += x; 
+			start = vectorAdd(start, stepY); 
+			stepX = vectorSub(stepX, stepY);
+			stepY = vectorCreate(gradY * InnerGrid->res.y * dirY, InnerGrid->res.y * dirY);
 		}
 
-		int x1 = ((int)start.x / (int)InnerGrid->res.x) * (int)InnerGrid->res.x,
-		    x2 = ((int)end.x / (int)InnerGrid->res.x) * (int)InnerGrid->res.x,
-			y1 = ((int)start.y / (int)InnerGrid->res.y) * (int)InnerGrid->res.y,
-		 	y2 = ((int)end.y / (int)InnerGrid->res.y) * (int)InnerGrid->res.y;
-
-		if(x1 == x2 && y1 == y2)
+		int signX = signf(end.x - start.x);
+		int signY = signf(end.y - start.y);
+		if(signX != dirX || signY != dirY)
 			break;
+
+		gridDrawPoint(start, col);
 	}
 	return ASCII_GRID_SUCCESS;
 
+}
+
+
+//triangle stuff
+
+Triangle gridCreateTriangle(Position p1, Position p2, Position p3){
+	Triangle ret;
+	ret.vertices[0] = p1; ret.vertices[1] = p2; ret.vertices[2] = p3;
+	ret.flags.val = 0x07;
+	return ret;
+}
+
+void gridTriangleSetFlags(Triangle *triangle, unsigned char flags){
+	triangle->flags.val = flags;
+}
+static int vectorSortByY(const void *v1, const void *v2){
+	return ((Vector*)v2)->y - ((Vector*)v1)->y ;
+}
+ASCIIGridStatus gridDrawTriangle(Triangle triangle, Color col){
+	Vector cpy[3];	
+	memcpy(cpy, triangle.vertices, sizeof(cpy));
+	qsort(cpy, 3, sizeof(Vector), vectorSortByY);
+		
+	if(triangle.flags.e1)
+		gridDrawLine(triangle.vertices[0], triangle.vertices[1], col);
+
+	if(triangle.flags.e2)
+		gridDrawLine(triangle.vertices[1], triangle.vertices[2], col);
+
+	if(triangle.flags.e3)
+		gridDrawLine(triangle.vertices[2], triangle.vertices[0], col);
+	return ASCII_GRID_SUCCESS;
+}
+
+
+
+//input stuff
+ASCIIBtnState gridGetButton(ASCIIBtn button){
+	if(!InnerGrid)
+		return 0;
+	if(!InnerGrid->joystick)
+		return 0;
+	return ASCIIJoyStickGetButton(InnerGrid->joystick, button);
+}
+
+ASCIIAxisState gridGetAxis(ASCIIAxisState axis){
+	if(!InnerGrid)
+		return 0;
+	if(!InnerGrid->joystick)
+		return 0;
+	return ASCIIJoyStickGetAxis(InnerGrid->joystick, axis);
 }

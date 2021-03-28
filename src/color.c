@@ -14,6 +14,7 @@ static const char* const colors_small = " .:-=+*#%@";
 //TODO: add xmacro here
 static const char* const sets[2] = {colors_big, colors_small};
 static const unsigned sizes[2] = {CHAR_COUNT_BIG, CHAR_COUNT_SMALL};
+extern inline int colorIsEqual(Color col, Color col1);
 
 //to avoid using too many if statemnts
 const char* current_set = colors_big;
@@ -45,11 +46,8 @@ Color colorMult(Color c1, double a){
 
 
 static unsigned setFGColor(char* buff, Color foreground){
-	char s[64];
-	sprintf(s, ASCII_START_ATTR ASCII_FG ASCII_RGB ";%d;%d;%d"ASCII_END_ATTR,
+	return sprintf(buff, ASCII_START_ATTR ASCII_FG ASCII_RGB ";%d;%d;%d"ASCII_END_ATTR,
 						(int)foreground.r, (int)foreground.g, (int)foreground.b);
-	sprintf(buff, "%s", s);	
-	return strlen(s);
 }
 
 unsigned colorPrint(char *buff, const char *content, Color fg){
@@ -92,6 +90,3 @@ Color colorHSVToRGB(double h, double s_, double v_){
 	return colorCreate((rgbPrime.r + m) * 255, (rgbPrime.g + m) * 255, (rgbPrime.b + m) * 255);
 }
 
-int colorIsEqual(Color col, Color col1){
-	return ((int)col.r == (int)col1.r) && ((int)col.g == (int)col1.g) && ((int)col.b == (int)col1.b);
-}
