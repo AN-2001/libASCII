@@ -6,6 +6,8 @@ an ASCII graphics library, can output to a true-color terminal or to PNG images.
 ![gif!](https://github.com/0Cufox0/libASCII/blob/main/docs/fluid_1.gif)
 ![gif!](https://github.com/0Cufox0/libASCII/blob/main/docs/mandlebrot_1.gif)
 ![gif!](https://github.com/0Cufox0/libASCII/blob/main/docs/metaballs_1.gif)
+![gif!](https://github.com/0Cufox0/libASCII/blob/main/docs/cube_1.gif)
+
 
 ## dependencies
 - libgd: for outputting images
