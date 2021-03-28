@@ -1,5 +1,6 @@
 # libASCII
-a **toy** library for drawing images but in ASCII!
+an ASCII graphics library, can output to a true-color terminal or to PNG images.
+
 
 ![gif!](https://github.com/0Cufox0/libASCII/blob/main/docs/triangles_1.gif)
 ![gif!](https://github.com/0Cufox0/libASCII/blob/main/docs/fluid_1.gif)
@@ -7,11 +8,13 @@ a **toy** library for drawing images but in ASCII!
 ![gif!](https://github.com/0Cufox0/libASCII/blob/main/docs/metaballs_1.gif)
 
 ## dependencies
-- libgd: for outputting images, added an option to compile without it if you only want to output to terminals.
+- libgd: for outputting images
+- libudev: for setting up input handling
 
 ## how to install:
 - run `make` to compile
 - after compiling you can simply link your programs with libascii.a, alternatively **not recommended** you can run `make install` and link with it like any other library
+
 ## how to use
 check out the examples!
 each one can be compiled with `make` 
