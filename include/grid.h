@@ -3,12 +3,13 @@
 #include "vector.h"
 #include "color.h"
 #include "enums.h"
-
+		
 typedef struct asciiGrid *ASCIIGrid;
 typedef int Frame;
 typedef Color* Pixels;
 typedef Color (*Generator)(Position pos);
-typedef void (*Update)(Frame frame);
+typedef int (*Update)(Frame frame);
+typedef void (*Cleanup)();
 typedef void (*Setup)(void);
 typedef unsigned Delay;
 
@@ -17,9 +18,9 @@ typedef unsigned Delay;
  * opens the grid, always call this before doing anything
  * it initializes the library!
  * */
-ASCIIGridStatus gridOpen(unsigned width, unsigned height, ASCIIFont font, Setup setup, Update update, Generator gen);
-#define gridOpenImg(width, height, setup, update, generate) gridOpen(width, height, ASCII_FONT_MEDIUM_BOLD, setup, update, generate)
-#define gridOpenTerm(width, height, setup, update, generate) gridOpen(width, height, ASCII_FONT_TERM, setup, update, generate)
+ASCIIGridStatus gridOpen(unsigned width, unsigned height, ASCIIFont font, Setup setup, Update update, Cleanup cleanup, Generator gen);
+#define gridOpenImg(width, height, setup, update, cleanup, generate) gridOpen(width, height, ASCII_FONT_MEDIUM_BOLD, setup, update, cleanup, generate)
+#define gridOpenTerm(width, height, setup, update, cleanup, generate) gridOpen(width, height, ASCII_FONT_TERM, setup, update, cleanup, generate)
 
 #define error(type) return _error(type, __func__,__FILE__, __LINE__)
 
@@ -60,4 +61,9 @@ ASCIIGridStatus gridSetCharset(ASCIICharSet set);
  * sets the delay between frames when printing out to terminal
  * */
 ASCIIGridStatus gridSetFrameDelay(Delay del);
+
+/**
+ * returns the dimensions of the grid
+ * */
+Dimention gridGetDim();
 #endif //ASCII_GRID_H

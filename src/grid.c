@@ -37,8 +37,9 @@ static struct asciiGrid{
 	Pixels pixels;
 	Dimention res;
 	Generator generator;
-	Update update;
 	Setup setup;
+	Update update;
+	Cleanup cleanup;
 	gdFontPtr font;
 	gdImagePtr img;
 	ASCIICharSet charSet;
@@ -49,7 +50,7 @@ static struct asciiGrid{
 }* InnerGrid = NULL;
 
 
-ASCIIGridStatus gridOpen(unsigned width, unsigned height, ASCIIFont font, Setup setup, Update update, Generator gen){
+ASCIIGridStatus gridOpen(unsigned width, unsigned height, ASCIIFont font, Setup setup, Update update, Cleanup cleanup, Generator gen){
 	if(width == 0 || height == 0) error(ASCII_GRID_BAD_ARGUMENT); 
 	InnerGrid = malloc(sizeof(*InnerGrid));	
 	if(!InnerGrid)
@@ -63,6 +64,7 @@ ASCIIGridStatus gridOpen(unsigned width, unsigned height, ASCIIFont font, Setup 
 	InnerGrid->generator = gen;
 	InnerGrid->setup = setup;
 	InnerGrid->update = update;
+	InnerGrid->cleanup = cleanup;
 	InnerGrid->charSet = ASCII_SET_BIG;
 	InnerGrid->frameDelay = 0;
 	InnerGrid->shouldClear = 1;
@@ -127,6 +129,9 @@ static void setupSignals(){
 		sigaction(SIGINT, &new_action, NULL);
 }
 static void handleInterrupt(int sig){
+	if(InnerGrid->cleanup)
+		InnerGrid->cleanup();
+
 	gridClose();	
 	exit(0);
 }
@@ -280,8 +285,10 @@ ASCIIGridStatus gridDraw(const char* filepath){
 
 		if(InnerGrid->shouldClear)
 			clear();
+
 		if(InnerGrid->update)
-			InnerGrid->update(InnerGrid->currentFrame);
+			if(InnerGrid->update(InnerGrid->currentFrame))
+				break;
 
 		if(InnerGrid->generator)
 			generatePixels();
@@ -297,6 +304,9 @@ ASCIIGridStatus gridDraw(const char* filepath){
 
 
 	}while(InnerGrid->currentFrame != InnerGrid->maxFrame);
+
+	if(InnerGrid->cleanup)
+		InnerGrid->cleanup();
 
 	return ASCII_GRID_SUCCESS;
 }
@@ -588,4 +598,10 @@ ASCIIAxisState gridGetAxis(ASCIIAxisState axis){
 	if(!InnerGrid->joystick)
 		return 0;
 	return ASCIIJoyStickGetAxis(InnerGrid->joystick, axis);
+}
+
+Dimention gridGetDim(){
+	if(!InnerGrid)
+		return vectorCreate(0, 0);
+	return InnerGrid->dim;
 }
