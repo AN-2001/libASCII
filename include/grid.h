@@ -18,7 +18,7 @@ typedef unsigned Delay;
  * it initializes the library!
  * */
 ASCIIGridStatus __gridOpen__(unsigned width, unsigned height, ASCIIFont font, Setup setup, Update update, Cleanup cleanup, Generator gen);
-#define gridOpenImg(width, height, setup, update, cleanup, generate) __gridOpen__(width / 7, height / 13, ASCII_FONT_MEDIUM_BOLD, setup, update, cleanup, generate)
+#define gridOpenImg(width, height, font, setup, update, cleanup, generate) __gridOpen__(width / gridGetFontDim(font).x, height / gridGetFontDim(font).y, font, setup, update, cleanup, generate)
 #define gridOpenTerm(width, height, setup, update, cleanup, generate) __gridOpen__(width, height, ASCII_FONT_TERM, setup, update, cleanup, generate)
 
 #define error(type) return _error(type, __func__,__FILE__, __LINE__)

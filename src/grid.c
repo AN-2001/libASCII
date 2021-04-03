@@ -83,7 +83,7 @@ ASCIIGridStatus __gridOpen__(unsigned width, unsigned height, ASCIIFont font, Se
 	memset(InnerGrid->pixels, 0, sizeof(Color) * (width * height));
 
 	write(fileno(stdout), ASCII_RESET_TERM ASCII_TURN_CURSOR_OFF, ASCII_RESET_TERM_SIZE + ASCII_TURN_CURSOR_OFF_SIZE);
-	
+
 	InnerGrid->joystick = ASCIIJoyStickCreate();
 
 	setupSignals();
@@ -203,7 +203,7 @@ static ASCIIGridStatus generateImage(){
 static ASCIIGridStatus drawToImage(const char* filepath){
 	if(!filepath)
 		error(ASCII_GRID_BAD_ARGUMENT);
-	
+
 	char path[64];
 	if(InnerGrid->maxFrame > 1){
 		sprintf(path, "%s%d.png", filepath, InnerGrid->currentFrame);
@@ -211,10 +211,11 @@ static ASCIIGridStatus drawToImage(const char* filepath){
 		sprintf(path, "%s.png", filepath);
 	}
 
-	generateImage();
-
 	if(InnerGrid->img == NULL)
 		error(ASCII_GRID_ERROR);
+
+	generateImage();
+
 
 	if(gdImageFile(InnerGrid->img, path) == GD_FALSE)
 		error(ASCII_GRID_COULDNT_SAVE_IMAGE);
@@ -265,7 +266,7 @@ ASCIIGridStatus gridDraw(const char* filepath){
 
 	if(InnerGrid->maxFrame < 0 && filepath)
 		error(ASCII_GRID_BAD_MAX_FRAME);
-		
+
 	if(InnerGrid->setup)
 		InnerGrid->setup();
 
@@ -345,7 +346,7 @@ ASCIIGridStatus clear(){
 		error(ASCII_GRID_ERROR);
 	InnerGrid->shouldClear = 0;
 	return ASCII_GRID_SUCCESS;
-		
+
 }
 ASCIIGridStatus gridClear(Color bg){
 	if(!InnerGrid)
@@ -387,27 +388,23 @@ ASCIIGridStatus gridSetMaxFrame( Frame max){
 static gdFont *ASCIIFontToGDFont(ASCIIFont font){
 	switch(font){
 		case ASCII_FONT_TINY:
-				InnerGrid->font = gdFontGetTiny();
-			break;
+			return gdFontGetTiny();
 		case ASCII_FONT_MEDIUM_BOLD:
-				InnerGrid->font = gdFontGetMediumBold();
-			break;
+			return  gdFontGetMediumBold();
 		case ASCII_FONT_GIANT:
-				InnerGrid->font = gdFontGetGiant();
-			break;
+			return gdFontGetGiant();
 		case ASCII_FONT_SMALL:
-				InnerGrid->font = gdFontGetSmall();
-			break;
+			return gdFontGetSmall();
 		case ASCII_FONT_TERM:
 		default:
 			return NULL;
 	}
-	return NULL;
 }
 static ASCIIGridStatus setupFont(ASCIIFont font){
 	InnerGrid->font = ASCIIFontToGDFont(font);
 	if(!InnerGrid->font){
 		InnerGrid->fontDim = vectorCreate(1, 1);
+		InnerGrid->img = NULL;
 		return ASCII_GRID_SUCCESS;
 	}
 	InnerGrid->fontDim = vectorCreate(InnerGrid->font->w, InnerGrid->font->h);
@@ -470,7 +467,7 @@ ASCIIGridStatus gridDrawEllipse(Position centre, Dimension dim, Color col){
 		//offset them 	
 		p1 = vectorAdd(centre, p1); p2 = vectorAdd(centre, p2);
 		p3 = vectorAdd(centre, p3); p4 = vectorAdd(centre, p4);
-	
+
 		//fill in a straight line 
 		gridDrawLine(p1, p2, col);
 		gridDrawLine(p3, p4, col);
@@ -492,7 +489,6 @@ ASCIIGridStatus gridDrawLine(Position start, Position end, Color col){
 			gridDrawPoint(vectorCreate(k, start.y), col);
 		return ASCII_GRID_SUCCESS;
 	}
-
 	int dirX = signf(end.x - start.x),
 		dirY = signf(end.y - start.y);
 
@@ -507,6 +503,7 @@ ASCIIGridStatus gridDrawLine(Position start, Position end, Color col){
 	stepX = vectorCreate(dirX, gradX  * dirX);
 	stepY = vectorCreate(gradY * dirY, dirY);
 
+	gridDrawPoint(start, col);
 	while(1){
 
 
@@ -553,7 +550,7 @@ ASCIIGridStatus gridDrawTriangle(Triangle triangle, Color col){
 	Vector cpy[3];	
 	memcpy(cpy, triangle.vertices, sizeof(cpy));
 	qsort(cpy, 3, sizeof(Vector), vectorSortByY);
-		
+
 	if(triangle.flags.e1)
 		gridDrawLine(triangle.vertices[0], triangle.vertices[1], col);
 

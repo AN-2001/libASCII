@@ -77,11 +77,12 @@ void cpyBoard(double dest[][SCALED_H], double src[][SCALED_H]){
 		}
 	}
 }
-void update(Frame f ){
+int update(Frame f ){
 	cpyBoard(copy, board);
 	if(f > 50)
 		sim();
 	cpyBoard(board, copy);
+	return 0;
 }
 
 int readImage(const char* path){
@@ -121,7 +122,7 @@ int main(int argc, const char* argv[]){
 		return 1;
 	}
 
-	gridOpen(WIDTH, HEIGHT,ASCII_FONT_SMALL, NULL, update, generate);
+	gridOpenImg(WIDTH, HEIGHT,ASCII_FONT_TINY, NULL, update, NULL, generate);
 	gridSetMaxFrame(300);
 	gridDraw("output/out");
 	gridClose();
