@@ -32,11 +32,16 @@ Color colorAdd(Color c1, Color c2){
 	return colorCreate(c1.r + c2.r, c1.g + c2.g, c1.b + c2.b);
 }
 
-Color colorCreate(double r, double g, double b){
+Color colorCreate(int r, int g, int b){
 	Color res;
 	res.r = r;
 	res.g = g;
 	res.b = b;
+	return res;
+}
+Color colorCreate_(int col){
+	Color res;
+	res.packed = col;
 	return res;
 }
 
@@ -47,7 +52,7 @@ Color colorMult(Color c1, double a){
 
 static unsigned setFGColor(char* buff, Color foreground){
 	return sprintf(buff, ASCII_START_ATTR ASCII_FG ASCII_RGB ";%d;%d;%d"ASCII_END_ATTR,
-						(int)foreground.r, (int)foreground.g, (int)foreground.b);
+						foreground.r, foreground.g, foreground.b);
 }
 
 unsigned colorPrint(char *buff, const char *content, Color fg){
@@ -63,30 +68,35 @@ unsigned colorPrintChar(char *buff, char content, Color col){
 	return colorCount + 1;
 }
 
-Color colorHSVToRGB(double h, double s_, double v_){
+Color colorHSVToRGB(int h_, int s_, int v_){
 	double s = s_ / 255.0;	
 	double v = v_ / 255.0;
+	double h = fmod(h_ + ceil(fabs(h_/360.0)) * 360,  360);
 	s = clamp(s, 0, 1.0); 
 	v = clamp(v, 0, 1.0); 
-	h = fmod(h + ceil(fabs(h/360.0)) * 360,  360);
 
 	double c = v * s;	
-	double h_ = (h / 60.0);
-	double x = c * ( 1 - fabs(fmod(h_, 2) - 1));
+	double h_norm = (h / 60.0);
+	double x = c * ( 1 - fabs(fmod(h_norm, 2) - 1));
 	double m = v - c;
-	Color rgbPrime;
+
+	struct _col{
+		double r,g,b;
+	}col;
+
 	if(h >= 0 && h <= 60)
-		rgbPrime = colorCreate(c, x, 0);
+		col = (struct _col){c, x, 0};
 	if(h >= 60 && h <= 120)
-		rgbPrime = colorCreate(x, c, 0);
+		col = (struct _col){x, c, 0};
 	if(h >= 120 && h <= 180)
-		rgbPrime = colorCreate(0, c, x);
+		col = (struct _col){0, c, x};
 	if(h >= 180 && h <= 240)
-		rgbPrime = colorCreate(0, x, c);
+		col = (struct _col){0, x, c};
 	if(h >= 240 && h <= 300)
-		rgbPrime = colorCreate(x, 0, c);
+		col = (struct _col){x, 0, c};
 	if(h >= 300 && h <= 360)
-		rgbPrime = colorCreate(c, 0, x);
-	return colorCreate((rgbPrime.r + m) * 255, (rgbPrime.g + m) * 255, (rgbPrime.b + m) * 255);
+		col = (struct _col){c, 0, x};
+
+	return colorCreate((col.r + m) * 255, (col.g + m) * 255, (col.b + m) * 255);
 }
 

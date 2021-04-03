@@ -182,6 +182,7 @@ static ASCIIGridStatus generatePixels(){
 			InnerGrid->pixels[index] = color;
 		}
 	}
+
 	return ASCII_GRID_SUCCESS;
 }
 
@@ -235,6 +236,7 @@ static ASCIIGridStatus printToTerm(){
 	if(InnerGrid == NULL)
 		error(ASCII_GRID_BAD_ARGUMENT);
 	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res); 
+	//TODO: questionable code, fix later
 	size_t size = (scaledDown.x + 1) * (scaledDown.y + 1) + 1;
 	char *output = malloc(20*size);
 	if(!output)
@@ -252,7 +254,6 @@ static ASCIIGridStatus printToTerm(){
 				error(ASCII_GRID_OUT_OF_BOUNDS);
 			Color col = InnerGrid->pixels[index];
 			char c = colorToChar(col);
-
 			if(colorIsEqual(col, lastColor)){
 				output += sprintf(output, "%c", c);
 			}else{

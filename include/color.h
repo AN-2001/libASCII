@@ -10,8 +10,13 @@
 
 extern const char* current_set;
 extern unsigned current_size;
-typedef struct color_t{
-	double r,g,b;
+typedef union color_t{
+	struct{
+		unsigned char r : 8;
+		unsigned char g : 8;
+		unsigned char b : 8;
+	};
+	int packed;
 } Color;
 
 typedef enum{
@@ -31,16 +36,18 @@ void colorSetCharset(ASCIICharSet set);
 Color colorAdd(Color c1, Color c2);
 
 //creates a new color
-Color colorCreate(double r, double g, double b);
+Color colorCreate(int r, int g, int b);
 
+//creates a new color from number
+Color colorCreate_(int col);
 //multiplies a color by a scalar
 Color colorMult(Color c1, double a);
 
 //converts from HSV to RGB
-Color colorHSVToRGB(double h, double s, double v);
+Color colorHSVToRGB(int h, int s, int v);
 
 inline int colorIsEqual(Color col, Color col1){
-	return ((int)col.r == (int)col1.r) && ((int)col.g == (int)col1.g) && ((int)col.b == (int)col1.b);
+	return (col.r == col1.r) && (col.g == col1.g) && (col.b == col1.b);
 }
 inline char colorToChar(Color col){
 	//calculate brightness
@@ -48,9 +55,7 @@ inline char colorToChar(Color col){
 	//scale it down
 	brightness = brightness / 255.0f;
 	brightness = clamp(brightness, 0.0, 1.0);
-
 	int index = (int)(brightness * (current_size - 1) );
-
 	return 	current_set[index];
 }
 
