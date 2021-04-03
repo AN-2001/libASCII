@@ -12,7 +12,7 @@ typedef int (*Update)(Frame frame);
 typedef void (*Cleanup)();
 typedef void (*Setup)(void);
 typedef unsigned Delay;
-
+//TODO: add macro to make making a grid at a certain resolution easier
 
 /**
  * opens the grid, always call this before doing anything
@@ -66,4 +66,7 @@ ASCIIGridStatus gridSetFrameDelay(Delay del);
  * returns the dimensions of the grid
  * */
 Dimention gridGetDim();
+
+
+//TODO: add a function that returns the resolution of a font and add a proper look up table for fonts
 #endif //ASCII_GRID_H

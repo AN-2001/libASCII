@@ -28,7 +28,6 @@ static void setupSignals();
 static ASCIIGridStatus clear();
 static ASCIIGridStatus clearImage();
 static ASCIIGridStatus clearPixels();
-inline static ASCIIGridStatus fixDim();
 static const char *statusToStr(ASCIIGridStatus status);
 
 static struct asciiGrid{
@@ -75,14 +74,13 @@ ASCIIGridStatus gridOpen(unsigned width, unsigned height, ASCIIFont font, Setup 
 		error(status);
 	}
 
-	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res);
-	InnerGrid->pixels = malloc(sizeof(Color) * (scaledDown.x) * (scaledDown.y));
+	InnerGrid->pixels = malloc(sizeof(Color) * (InnerGrid->dim.x) * (InnerGrid->dim.y));
 	if(!InnerGrid->pixels){
 		gridClose();
 		error(ASCII_GRID_OUT_OF_MEMORY);
 	}
 
-	memset(InnerGrid->pixels, 0, sizeof(Color) * (scaledDown.x * scaledDown.y));
+	memset(InnerGrid->pixels, 0, sizeof(Color) * (width * height));
 
 	write(fileno(stdout), ASCII_RESET_TERM ASCII_TURN_CURSOR_OFF, ASCII_RESET_TERM_SIZE + ASCII_TURN_CURSOR_OFF_SIZE);
 	
@@ -166,18 +164,12 @@ static ASCIIGridStatus generatePixels(){
 	if( !InnerGrid->pixels)
 		error(ASCII_GRID_ERROR);
 
-
-	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res); 
-
-	for(int j = 0; j < scaledDown.y; j ++){
-		for(int i = 0; i < scaledDown.x ; i ++){
-			int index = INDEX(i, j, scaledDown.x);
-			if(index >= (scaledDown.x) * (scaledDown.y))
-				error(ASCII_GRID_OUT_OF_BOUNDS);
-			
+	for(int j = 0; j < InnerGrid->dim.y; j ++){
+		for(int i = 0; i < InnerGrid->dim.x ; i ++){
 			Position pos = {i, j};
-			pos.x *= InnerGrid->res.x;
-			pos.y *= InnerGrid->res.y;
+			int index = INDEX(pos.x, pos.y, InnerGrid->dim.x);
+			if(index >= (InnerGrid->dim.x) * (InnerGrid->dim.y))
+				error(ASCII_GRID_OUT_OF_BOUNDS);
 			Color color = generateValue(pos); 
 			InnerGrid->pixels[index] = color;
 		}
@@ -193,12 +185,10 @@ static ASCIIGridStatus generateImage(){
 	if(!InnerGrid->font || !InnerGrid->pixels)
 		error(ASCII_GRID_ERROR);
 
-	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res);
-
-	for(int j = 0; j < scaledDown.y; j ++){
-		for(int i = 0; i < scaledDown.x ; i ++){
-			int index = INDEX(i, j, scaledDown.x);
-			if(index >= (scaledDown.x) * (scaledDown.y))
+	for(int j = 0; j < InnerGrid->dim.y; j ++){
+		for(int i = 0; i < InnerGrid->dim.x ; i ++){
+			int index = INDEX(i, j, InnerGrid->dim.x);
+			if(index >= (InnerGrid->dim.x) * (InnerGrid->dim.y))
 				error(ASCII_GRID_OUT_OF_BOUNDS);
 
 			Color col = InnerGrid->pixels[index];
@@ -235,9 +225,9 @@ static ASCIIGridStatus drawToImage(const char* filepath){
 static ASCIIGridStatus printToTerm(){
 	if(InnerGrid == NULL)
 		error(ASCII_GRID_BAD_ARGUMENT);
-	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res); 
+
 	//TODO: questionable code, fix later
-	size_t size = (scaledDown.x + 1) * (scaledDown.y + 1) + 1;
+	size_t size = (InnerGrid->dim.x + 1) * (InnerGrid->dim.y) + 1;
 	char *output = malloc(20*size);
 	if(!output)
 		error(ASCII_GRID_OUT_OF_MEMORY);
@@ -247,10 +237,10 @@ static ASCIIGridStatus printToTerm(){
 
 
 
-	for(int j = 0; j < scaledDown.y; j ++){
-		for(int i = 0; i < scaledDown.x ; i ++){
-			int index = INDEX(i, j, scaledDown.x);
-			if(index >= (scaledDown.x) * (scaledDown.y))
+	for(int j = 0; j < InnerGrid->dim.y; j ++){
+		for(int i = 0; i < InnerGrid->dim.x ; i ++){
+			int index = INDEX(i, j, InnerGrid->dim.x);
+			if(index >= (InnerGrid->dim.x) * (InnerGrid->dim.y))
 				error(ASCII_GRID_OUT_OF_BOUNDS);
 			Color col = InnerGrid->pixels[index];
 			char c = colorToChar(col);
@@ -333,11 +323,10 @@ ASCIIGridStatus clearPixels(){
 		error(ASCII_GRID_NOT_OPEN);
 
 
-	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res); 
-	for(int j = 0; j < scaledDown.y; j ++){
-		for(int i = 0; i < scaledDown.x ; i ++){
-			int index = INDEX(i, j, scaledDown.x);
-			if(index >= (scaledDown.x) * (scaledDown.y))
+	for(int j = 0; j < InnerGrid->dim.y; j ++){
+		for(int i = 0; i < InnerGrid->dim.x ; i ++){
+			int index = INDEX(i, j, InnerGrid->dim.x);
+			if(index >= (InnerGrid->dim.x) * (InnerGrid->dim.y))
 				error(ASCII_GRID_OUT_OF_BOUNDS);
 			InnerGrid->pixels[index] = InnerGrid->clearColor;
 		}
@@ -412,16 +401,13 @@ static ASCIIGridStatus setupFont(ASCIIFont font){
 				InnerGrid->font = gdFontGetSmall();
 			break;
 		case ASCII_FONT_TERM:
-			InnerGrid->res = vectorCreate(7, 13);
-			fixDim();
+			InnerGrid->res = vectorCreate(1, 1);
 			return ASCII_GRID_SUCCESS;
 		default:
 			error(ASCII_GRID_BAD_ARGUMENT);
 	}
 	InnerGrid->res = vectorCreate(InnerGrid->font->w, InnerGrid->font->h);
-	fixDim();
-
-	InnerGrid->img = gdImageCreateTrueColor(InnerGrid->dim.x, InnerGrid->dim.y);
+	InnerGrid->img = gdImageCreateTrueColor(InnerGrid->dim.x * InnerGrid->res.x, InnerGrid->dim.y * InnerGrid->res.y);
 	if(!InnerGrid->img)
 		error(ASCII_GRID_OUT_OF_MEMORY);
 
@@ -448,33 +434,20 @@ ASCIIGridStatus gridSetFrameDelay(Delay del){
 }
 
 
-inline ASCIIGridStatus fixDim(){
-	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res);
-	scaledDown.x = (int)(scaledDown.x);
-	scaledDown.y = (int)(scaledDown.y);
-	if(scaledDown.x == 0 || scaledDown.y == 0)
-		error(ASCII_GRID_TOO_SMALL);
-
-	InnerGrid->dim.x = scaledDown.x * InnerGrid->res.x;	
-	InnerGrid->dim.y = scaledDown.y * InnerGrid->res.y;	
-	return ASCII_GRID_SUCCESS;
-}
 
 //  DRAW FUNCTIONS
 
 ASCIIGridStatus gridDrawPoint(Position pos, Color col){
 	if(!InnerGrid)
 		error(ASCII_GRID_NOT_OPEN);
-	pos = DimentionScale(pos, InnerGrid->res); 
-	Dimention scaledDown = DimentionScale(InnerGrid->dim, InnerGrid->res); 
-	if(pos.x < 0 || pos.x >= scaledDown.x)
+	if(pos.x < 0 || pos.x >= InnerGrid->dim.x)
 		return ASCII_GRID_SUCCESS;
 
-	if(pos.y < 0 || pos.y >= scaledDown.y)
+	if(pos.y < 0 || pos.y >= InnerGrid->dim.y)
 		return ASCII_GRID_SUCCESS;
-	int index = INDEX(pos.x, pos.y, scaledDown.x);
+	int index = INDEX(pos.x, pos.y, InnerGrid->dim.x);
 	//this is just a redundency to make sure it doesn't break!
-	if(index < 0 || index > scaledDown.x * scaledDown.y)
+	if(index < 0 || index > InnerGrid->dim.x * InnerGrid->dim.y)
 		return ASCII_GRID_SUCCESS;
 	InnerGrid->pixels[index] = col; 
 	return ASCII_GRID_SUCCESS;
