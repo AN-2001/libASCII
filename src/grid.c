@@ -29,12 +29,12 @@ static ASCIIGridStatus clear();
 static ASCIIGridStatus clearImage();
 static ASCIIGridStatus clearPixels();
 static const char *statusToStr(ASCIIGridStatus status);
-
+static gdFont *ASCIIFontToGDFont(ASCIIFont font);
 static struct asciiGrid{
-	Dimention dim;
+	Dimension dim;
 	Frame currentFrame, maxFrame;
 	Pixels pixels;
-	Dimention res;
+	Dimension fontDim;
 	Generator generator;
 	Setup setup;
 	Update update;
@@ -49,7 +49,7 @@ static struct asciiGrid{
 }* InnerGrid = NULL;
 
 
-ASCIIGridStatus gridOpen(unsigned width, unsigned height, ASCIIFont font, Setup setup, Update update, Cleanup cleanup, Generator gen){
+ASCIIGridStatus __gridOpen__(unsigned width, unsigned height, ASCIIFont font, Setup setup, Update update, Cleanup cleanup, Generator gen){
 	if(width == 0 || height == 0) error(ASCII_GRID_BAD_ARGUMENT); 
 	InnerGrid = malloc(sizeof(*InnerGrid));	
 	if(!InnerGrid)
@@ -194,8 +194,8 @@ static ASCIIGridStatus generateImage(){
 			Color col = InnerGrid->pixels[index];
 			char colorChar = colorToChar(col);
 			Color bg = InnerGrid->clearColor;
-			gdImageFilledRectangle(InnerGrid->img, i * InnerGrid->res.x, j * InnerGrid->res.y, (i+1) * InnerGrid->res.x, (j+1) * InnerGrid->res.y, gdTrueColor((int)bg.r, (int)bg.g, (int)bg.b));
-			gdImageChar(InnerGrid->img, InnerGrid->font, i * InnerGrid->res.x , j * InnerGrid->res.y, colorChar, gdTrueColor((int)col.r, (int)col.g, (int)col.b));
+			gdImageFilledRectangle(InnerGrid->img, i * InnerGrid->fontDim.x, j * InnerGrid->fontDim.y, (i+1) * InnerGrid->fontDim.x, (j+1) * InnerGrid->fontDim.y, gdTrueColor(bg.r, bg.g, bg.b));
+			gdImageChar(InnerGrid->img, InnerGrid->font, i * InnerGrid->fontDim.x , j * InnerGrid->fontDim.y, colorChar, gdTrueColor(col.r, col.g, col.b));
 		}
 	}
 	return ASCII_GRID_SUCCESS;
@@ -226,7 +226,6 @@ static ASCIIGridStatus printToTerm(){
 	if(InnerGrid == NULL)
 		error(ASCII_GRID_BAD_ARGUMENT);
 
-	//TODO: questionable code, fix later
 	size_t size = (InnerGrid->dim.x + 1) * (InnerGrid->dim.y) + 1;
 	char *output = malloc(20*size);
 	if(!output)
@@ -385,8 +384,7 @@ ASCIIGridStatus gridSetMaxFrame( Frame max){
 	InnerGrid->maxFrame = max;
 	return ASCII_GRID_SUCCESS;
 }
-//TODO: use a lookup table
-static ASCIIGridStatus setupFont(ASCIIFont font){
+static gdFont *ASCIIFontToGDFont(ASCIIFont font){
 	switch(font){
 		case ASCII_FONT_TINY:
 				InnerGrid->font = gdFontGetTiny();
@@ -401,13 +399,19 @@ static ASCIIGridStatus setupFont(ASCIIFont font){
 				InnerGrid->font = gdFontGetSmall();
 			break;
 		case ASCII_FONT_TERM:
-			InnerGrid->res = vectorCreate(1, 1);
-			return ASCII_GRID_SUCCESS;
 		default:
-			error(ASCII_GRID_BAD_ARGUMENT);
+			return NULL;
 	}
-	InnerGrid->res = vectorCreate(InnerGrid->font->w, InnerGrid->font->h);
-	InnerGrid->img = gdImageCreateTrueColor(InnerGrid->dim.x * InnerGrid->res.x, InnerGrid->dim.y * InnerGrid->res.y);
+	return NULL;
+}
+static ASCIIGridStatus setupFont(ASCIIFont font){
+	InnerGrid->font = ASCIIFontToGDFont(font);
+	if(!InnerGrid->font){
+		InnerGrid->fontDim = vectorCreate(1, 1);
+		return ASCII_GRID_SUCCESS;
+	}
+	InnerGrid->fontDim = vectorCreate(InnerGrid->font->w, InnerGrid->font->h);
+	InnerGrid->img = gdImageCreateTrueColor(InnerGrid->dim.x * InnerGrid->fontDim.x, InnerGrid->dim.y * InnerGrid->fontDim.y);
 	if(!InnerGrid->img)
 		error(ASCII_GRID_OUT_OF_MEMORY);
 
@@ -453,7 +457,7 @@ ASCIIGridStatus gridDrawPoint(Position pos, Color col){
 	return ASCII_GRID_SUCCESS;
 }
 
-ASCIIGridStatus gridDrawEllipse(Position centre, Dimention dim, Color col){
+ASCIIGridStatus gridDrawEllipse(Position centre, Dimension dim, Color col){
 	if(!InnerGrid)
 		error(ASCII_GRID_NOT_OPEN);
 	Position p1, p2, p3, p4;
@@ -478,42 +482,48 @@ ASCIIGridStatus gridDrawEllipse(Position centre, Dimention dim, Color col){
 ASCIIGridStatus gridDrawLine(Position start, Position end, Color col){
 
 	if(end.x == start.x){
-		for(double k = minf(start.y, end.y); k < maxf(start.y, end.y); k += InnerGrid->res.y)
+		for(double k = minf(start.y, end.y); k < maxf(start.y, end.y); k ++)
 			gridDrawPoint(vectorCreate(start.x, k), col);
 		return ASCII_GRID_SUCCESS;
 	}
 
 	if(end.y == start.y){
-		for(double k = minf(start.x, end.x); k < maxf(start.x, end.x); k += InnerGrid->res.x)
+		for(double k = minf(start.x, end.x); k < maxf(start.x, end.x); k ++)
 			gridDrawPoint(vectorCreate(k, start.y), col);
 		return ASCII_GRID_SUCCESS;
 	}
 
 	int dirX = signf(end.x - start.x),
 		dirY = signf(end.y - start.y);
-	Vector stepX ,stepY;
-	double posX = (dirX < 0 ? fmod(start.x, InnerGrid->res.x) : InnerGrid->res.x - fmod(start.x, InnerGrid->res.x)),
-		   posY = (dirY < 0 ? InnerGrid->res.y - fmod(start.y, InnerGrid->res.y) : fmod(start.y, InnerGrid->res.y));
-	double gradX = (end.y - start.y) / (end.x - start.x),
-		   gradY = (end.x - start.x) / (end.y - start.y);
 
-	stepX = vectorCreate(posX * dirX, gradX * posX * dirX);
-	stepY = vectorCreate(gradY * posY * dirY,  posY * dirY);
+	Vector stepX ,stepY;
+	int signX, signY;
+	double gradX, gradY;
+
+
+	gradX = (end.y - start.y) / (end.x - start.x);
+	gradY = (end.x - start.x) / (end.y - start.y);
+
+	stepX = vectorCreate(dirX, gradX  * dirX);
+	stepY = vectorCreate(gradY * dirY, dirY);
 
 	while(1){
 
+
+		gradX = (end.y - start.y) / (end.x - start.x);
+		gradY = (end.x - start.x) / (end.y - start.y);
 		if(vectorMag(stepX) < vectorMag(stepY)){
 			start = vectorAdd(start, stepX); 
 			stepY = vectorSub(stepY, stepX);
-			stepX = vectorCreate(InnerGrid->res.x * dirX, gradX * InnerGrid->res.x * dirX);
+			stepX = vectorCreate(dirX, gradX * dirX);
 		}else{
 			start = vectorAdd(start, stepY); 
 			stepX = vectorSub(stepX, stepY);
-			stepY = vectorCreate(gradY * InnerGrid->res.y * dirY, InnerGrid->res.y * dirY);
+			stepY = vectorCreate(gradY * dirY, dirY);
 		}
 
-		int signX = signf(end.x - start.x);
-		int signY = signf(end.y - start.y);
+		signX = signf(end.x - start.x);
+		signY = signf(end.y - start.y);
 		if(signX != dirX || signY != dirY)
 			break;
 
@@ -574,8 +584,13 @@ ASCIIAxisState gridGetAxis(ASCIIAxisState axis){
 	return ASCIIJoyStickGetAxis(InnerGrid->joystick, axis);
 }
 
-Dimention gridGetDim(){
+Dimension gridGetDim(){
 	if(!InnerGrid)
 		return vectorCreate(0, 0);
 	return InnerGrid->dim;
 }
+Dimension gridGetFontDim(ASCIIFont font){
+	gdFont *gdfont = ASCIIFontToGDFont(font);
+	return vectorCreate(gdfont->w, gdfont->h);
+}
+

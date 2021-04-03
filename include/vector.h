@@ -8,7 +8,7 @@ typedef struct vector{
 
 typedef struct vector Direction;
 typedef struct vector Position;
-typedef struct vector Dimention;
+typedef struct vector Dimension;
 
 
 
@@ -29,7 +29,5 @@ double vectorAngBetween(Vector v1, Vector v2);
 //multiplies the vector by the scalar
 Vector vectorScale(Vector dest, double a);
 
-//scales the dimentions down to dim
-Dimention DimentionScale(Dimention dim, Dimention scaledDown);
 #endif //ASCII_VECTOR_H
 

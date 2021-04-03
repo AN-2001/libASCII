@@ -22,7 +22,7 @@ void gridTriangleSetFlags(Triangle *triangle, unsigned char flags);
 
 ASCIIGridStatus gridDrawPoint(Position pos, Color col);
 
-ASCIIGridStatus gridDrawEllipse(Position centre, Dimention dim, Color col);
+ASCIIGridStatus gridDrawEllipse(Position centre, Dimension dim, Color col);
 
 #define gridDrawCircle(position, radius, col) gridDrawEllipse(position, vectorCreate(radius, radius), col)
 

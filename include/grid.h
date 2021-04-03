@@ -12,15 +12,14 @@ typedef int (*Update)(Frame frame);
 typedef void (*Cleanup)();
 typedef void (*Setup)(void);
 typedef unsigned Delay;
-//TODO: add macro to make making a grid at a certain resolution easier
 
 /**
  * opens the grid, always call this before doing anything
  * it initializes the library!
  * */
-ASCIIGridStatus gridOpen(unsigned width, unsigned height, ASCIIFont font, Setup setup, Update update, Cleanup cleanup, Generator gen);
-#define gridOpenImg(width, height, setup, update, cleanup, generate) gridOpen(width, height, ASCII_FONT_MEDIUM_BOLD, setup, update, cleanup, generate)
-#define gridOpenTerm(width, height, setup, update, cleanup, generate) gridOpen(width, height, ASCII_FONT_TERM, setup, update, cleanup, generate)
+ASCIIGridStatus __gridOpen__(unsigned width, unsigned height, ASCIIFont font, Setup setup, Update update, Cleanup cleanup, Generator gen);
+#define gridOpenImg(width, height, setup, update, cleanup, generate) __gridOpen__(width / 7, height / 13, ASCII_FONT_MEDIUM_BOLD, setup, update, cleanup, generate)
+#define gridOpenTerm(width, height, setup, update, cleanup, generate) __gridOpen__(width, height, ASCII_FONT_TERM, setup, update, cleanup, generate)
 
 #define error(type) return _error(type, __func__,__FILE__, __LINE__)
 
@@ -65,8 +64,12 @@ ASCIIGridStatus gridSetFrameDelay(Delay del);
 /**
  * returns the dimensions of the grid
  * */
-Dimention gridGetDim();
+Dimension gridGetDim();
 
+/*
+ * returns the dimension of the font
+ * */
+Dimension gridGetFontDim(ASCIIFont font);
 
 //TODO: add a function that returns the resolution of a font and add a proper look up table for fonts
 #endif //ASCII_GRID_H

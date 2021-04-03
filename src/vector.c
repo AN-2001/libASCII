@@ -39,8 +39,3 @@ Vector vectorNormalized(Vector vec){
 		return vectorCreate(0, 0);
 	return vectorScale(vec, 1.0 / mag);
 }
-
-
-Dimention DimentionScale(Dimention dim, Dimention scaledDown){
-	return (Dimention){dim.x / scaledDown.x, dim.y / scaledDown.y};
-}
