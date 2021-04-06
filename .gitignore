@@ -3,5 +3,6 @@
 compile_commands.json
 .clangd/
 .oh-my-zsh/
+examples/
 
 
