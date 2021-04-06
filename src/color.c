@@ -49,23 +49,13 @@ Color colorMult(Color c1, double a){
 	return colorCreate(c1.r * a, c1.g * a, c1.b * a);
 }
 
-
-static unsigned setFGColor(char* buff, Color foreground){
-	return sprintf(buff, ASCII_START_ATTR ASCII_FG ASCII_RGB ";%d;%d;%d"ASCII_END_ATTR,
+static unsigned setFGColor(Color foreground){
+	return printf( ASCII_START_ATTR ASCII_FG ASCII_RGB ";%d;%d;%d"ASCII_END_ATTR,
 						foreground.r, foreground.g, foreground.b);
 }
-
-unsigned colorPrint(char *buff, const char *content, Color fg){
-	unsigned colorCount = setFGColor(buff, fg);
-	buff += colorCount;
-	return colorCount + sprintf(buff, "%s", content);
-}
-
-unsigned colorPrintChar(char *buff, char content, Color col){
-	unsigned colorCount = setFGColor(buff, col);
-	buff += colorCount;
-	*buff = content;
-	return colorCount + 1;
+unsigned colorPrintChar(char content, Color col){
+	unsigned colorCount = setFGColor(col);
+	return colorCount + putc(content, stdout);
 }
 
 Color colorHSVToRGB(int h_, int s_, int v_){

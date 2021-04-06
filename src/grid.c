@@ -203,7 +203,6 @@ static ASCIIGridStatus generateImage(){
 static ASCIIGridStatus drawToImage(const char* filepath){
 	if(!filepath)
 		error(ASCII_GRID_BAD_ARGUMENT);
-
 	char path[64];
 	if(InnerGrid->maxFrame > 1){
 		sprintf(path, "%s%d.png", filepath, InnerGrid->currentFrame);
@@ -226,17 +225,7 @@ static ASCIIGridStatus drawToImage(const char* filepath){
 static ASCIIGridStatus printToTerm(){
 	if(InnerGrid == NULL)
 		error(ASCII_GRID_BAD_ARGUMENT);
-
-	size_t size = (InnerGrid->dim.x + 1) * (InnerGrid->dim.y) + 1;
-	char *output = malloc(20*size);
-	if(!output)
-		error(ASCII_GRID_OUT_OF_MEMORY);
-
-	char *start = output;
 	Color lastColor = colorCreate(0, 0, 0);
-
-
-
 	for(int j = 0; j < InnerGrid->dim.y; j ++){
 		for(int i = 0; i < InnerGrid->dim.x ; i ++){
 			int index = INDEX(i, j, InnerGrid->dim.x);
@@ -245,18 +234,15 @@ static ASCIIGridStatus printToTerm(){
 			Color col = InnerGrid->pixels[index];
 			char c = colorToChar(col);
 			if(colorIsEqual(col, lastColor)){
-				output += sprintf(output, "%c", c);
+				putc(c, stdout);
 			}else{
-				output += colorPrintChar(output, c, col);  
+				colorPrintChar(c, col);  
 				lastColor = col;
 			}
 		}
-		sprintf(output++, "\n");
+		putc('\n', stdout);
 	}
-
 	write(fileno(stdout), ASCII_MOVE_CURSOR(1, 1), ASCII_RESET_CURSOR_SIZE);
-	write(fileno(stdout), start, strlen(start));
-	free(start);
 	return ASCII_GRID_SUCCESS;
 }
 
@@ -314,6 +300,7 @@ ASCIIGridStatus clearImage(){
 			gdImageSetPixel(InnerGrid->img, x, y, gdTrueColorAlpha((int)bg.r, (int)bg.g, (int)bg.b, 0));
 		}
 	}
+
 	return ASCII_GRID_SUCCESS;
 }
 
@@ -331,19 +318,23 @@ ASCIIGridStatus clearPixels(){
 			InnerGrid->pixels[index] = InnerGrid->clearColor;
 		}
 	}
+
 	return ASCII_GRID_SUCCESS;
 }
 ASCIIGridStatus clear(){
 	if(!InnerGrid)
 		error(ASCII_GRID_NOT_OPEN);
+
 	ASCIIGridStatus s1 = ASCII_GRID_SUCCESS;
 	ASCIIGridStatus s2 = clearPixels();
 
-	if(InnerGrid->img){
+	if(InnerGrid->img)
 		s1 = clearImage();
-	}
+	
+
 	if(s1 != ASCII_GRID_SUCCESS || s2 != ASCII_GRID_SUCCESS)
 		error(ASCII_GRID_ERROR);
+
 	InnerGrid->shouldClear = 0;
 	return ASCII_GRID_SUCCESS;
 
@@ -475,20 +466,25 @@ ASCIIGridStatus gridDrawEllipse(Position centre, Dimension dim, Color col){
 
 	return ASCII_GRID_SUCCESS;
 }
-
-ASCIIGridStatus gridDrawLine(Position start, Position end, Color col){
-
+unsigned getLine(Position start, Position end, Position **line){
+	int mag = abs((int)end.y - (int)start.y) + abs((int)end.x - (int)start.x);
+	*line = malloc(sizeof(Position) * mag*2);
+	unsigned i = 0;
+	if(!*line)
+		return i;
 	if(end.x == start.x){
 		for(double k = minf(start.y, end.y); k < maxf(start.y, end.y); k ++)
-			gridDrawPoint(vectorCreate(start.x, k), col);
-		return ASCII_GRID_SUCCESS;
+			(*line)[i++] = vectorCreate(start.x, k);
+		return i;
 	}
 
 	if(end.y == start.y){
 		for(double k = minf(start.x, end.x); k < maxf(start.x, end.x); k ++)
-			gridDrawPoint(vectorCreate(k, start.y), col);
-		return ASCII_GRID_SUCCESS;
+			(*line)[i++] = vectorCreate(k, start.y);
+		return i;
 	}
+
+	(*line)[i++] = start;
 	int dirX = signf(end.x - start.x),
 		dirY = signf(end.y - start.y);
 
@@ -502,13 +498,9 @@ ASCIIGridStatus gridDrawLine(Position start, Position end, Color col){
 
 	stepX = vectorCreate(dirX, gradX  * dirX);
 	stepY = vectorCreate(gradY * dirY, dirY);
-
-	gridDrawPoint(start, col);
 	while(1){
 
 
-		gradX = (end.y - start.y) / (end.x - start.x);
-		gradY = (end.x - start.x) / (end.y - start.y);
 		if(vectorMag(stepX) < vectorMag(stepY)){
 			start = vectorAdd(start, stepX); 
 			stepY = vectorSub(stepY, stepX);
@@ -519,13 +511,28 @@ ASCIIGridStatus gridDrawLine(Position start, Position end, Color col){
 			stepY = vectorCreate(gradY * dirY, dirY);
 		}
 
+
+		gradX = (end.y - start.y) / (end.x - start.x);
+		gradY = (end.x - start.x) / (end.y - start.y);
+
+		stepX = vectorCreate(dirX, gradX  * dirX);
+		stepY = vectorCreate(gradY * dirY, dirY);
+
 		signX = signf(end.x - start.x);
 		signY = signf(end.y - start.y);
 		if(signX != dirX || signY != dirY)
 			break;
-
-		gridDrawPoint(start, col);
+		(*line)[i++] = start;
 	}
+	return i;
+}
+ASCIIGridStatus gridDrawLine(Position start, Position end, Color col){
+	Position *line;
+	unsigned size = getLine(start, end, &line);
+	for(int i = 0; i < size;i++){
+		gridDrawPoint(line[i], col);
+	}
+	free(line);
 	return ASCII_GRID_SUCCESS;
 
 }
@@ -544,21 +551,67 @@ void gridTriangleSetFlags(Triangle *triangle, unsigned char flags){
 	triangle->flags.val = flags;
 }
 static int vectorSortByY(const void *v1, const void *v2){
-	return ((Vector*)v2)->y - ((Vector*)v1)->y ;
+	return ((Position*)v1)->y - ((Position*)v2)->y ;
 }
 ASCIIGridStatus gridDrawTriangle(Triangle triangle, Color col){
 	Vector cpy[3];	
 	memcpy(cpy, triangle.vertices, sizeof(cpy));
-	qsort(cpy, 3, sizeof(Vector), vectorSortByY);
+	qsort(cpy, 3, sizeof(Position), vectorSortByY);
 
-	if(triangle.flags.e1)
-		gridDrawLine(triangle.vertices[0], triangle.vertices[1], col);
+	Position *l1;
+	Position *l2;
+	Position *l3;
+	unsigned size1 = getLine(cpy[0], cpy[2], &l1);
+	unsigned size2 = getLine(cpy[0], cpy[1], &l2);
+	unsigned size3 = getLine(cpy[1], cpy[2], &l3);
+	if(((int)cpy[2].y - (int)cpy[0].y) > 0){
+		Position scanlines[(int)cpy[2].y - (int)cpy[0].y];
+		
+		for(int i = 0; i < cpy[2].y - cpy[0].y;i++){
+			scanlines[i] = vectorCreate(0, 0);
+		}
 
-	if(triangle.flags.e2)
-		gridDrawLine(triangle.vertices[1], triangle.vertices[2], col);
+		for(int i = 0; i < size1; i++){
+			int current = (int)l1[i].y - (int)cpy[0].y;
+			scanlines[current].x = l1[i].x;
+		}
 
-	if(triangle.flags.e3)
-		gridDrawLine(triangle.vertices[2], triangle.vertices[0], col);
+		for(int i = 0; i < size2; i++){
+			int current = (int)l2[i].y - (int)cpy[0].y;
+			scanlines[current].y = l2[i].x;
+		}
+		for(int i = 0; i < size3; i++){
+			int current = (int)l3[i].y - (int)cpy[0].y;
+			scanlines[current].y = l3[i].x;
+		}
+
+		for(int i = 0; i < cpy[2].y - cpy[0].y;i++){
+			for(int k = fmin(scanlines[i].x, scanlines[i].y); k < fmax(scanlines[i].x, scanlines[i].y); k++){
+				double j = k - fmin(scanlines[i].x, scanlines[i].y);
+				double mag = (fmax(scanlines[i].x, scanlines[i].y) - fmin(scanlines[i].x, scanlines[i].y));
+				double d1 = j / mag;
+				double d2 = 1 - d1;
+				Color color = colorAdd(colorMult(col, d2), colorMult(colorCreate(255, 0, 0), d1));
+				gridDrawPoint(vectorCreate(k, i + (int)cpy[0].y), color);
+			}
+		}
+	}
+	
+	col = colorCreate(255, 255, 255);
+	for(int i = 0; i < size1; i++){
+		gridDrawPoint(l1[i], col);
+	}
+
+	for(int i = 0; i < size2; i++){
+		gridDrawPoint(l2[i], col);
+	}
+
+	for(int i = 0; i < size3; i++){
+		gridDrawPoint(l3[i], col);
+	}
+	free(l1);
+	free(l2);
+	free(l3);
 	return ASCII_GRID_SUCCESS;
 }
 
@@ -579,8 +632,8 @@ ASCIIAxisState gridGetAxis(ASCIIAxisState axis){
 	if(!InnerGrid->joystick)
 		return 0;
 	return ASCIIJoyStickGetAxis(InnerGrid->joystick, axis);
-}
 
+}
 Dimension gridGetDim(){
 	if(!InnerGrid)
 		return vectorCreate(0, 0);
